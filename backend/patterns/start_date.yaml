@@ -1,0 +1,272 @@
+patterns:
+  # ===============================================================================
+  # 1. VERY SPECIFIC PATTERNS (Multi-part context, e.g., "Agreement (...) dated")
+  # ===============================================================================
+  - '(?:this\s+)?(?:\w+\s+)*(?:agreement|contract)\s*\([^)]*\),?\s*dated\s+as\s+of\s+([A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})'
+  - '(?:this\s+)?amendment\s*\([^)]*\)\s*is\s+entered\s+into\s+on\s+([A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})'
+  - '(?:agreement|contract)\s*\([^)]*\)\s*dated\s+([A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})'
+  - '(?:agreement|contract)\s*\([^)]*\)\s*is\s+entered\s+into\s+as\s+of\s+([A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})'
+  - '(?:agreement|contract)\s+is\s+entered\s+into\s+as\s+of\s+([A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})(?!\s*\(as\s+amended\)|.*means\s+that\s+certain)'
+  - 'is\s+made\s+this\s+([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4})\s*\("?<the\s+Effective\s+Date>"?\)'
+  - 'is\s+made\s+and\s+entered\s+into\s+as\s+of\s+the\s+(\d{1,2}t\s*h\s+day\s+of\s+[A-Za-z\.]+?,\s+\d{4})'
+  
+  # ===============================================================================
+  # 2. SPECIFIC PHRASES & KEYWORDS (e.g., "made on", "effective as of", "commences")
+  # ===============================================================================
+  - '(?:this\s+)?(?:agreement|contract)\s+is\s+made\s+on\s+the\s+(\d{1,2}(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:day\s+of\s+)?[A-Za-z\.]+,?\s+\d{4})'
+  - 'shall\s+be\s+effective\s+as\s+of\s+([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4})\s*"?(?:the\s+Commencement\s+Date)?'
+  - 'is\s+made\s+this\s+(\d{1,2}(?:st|nd|rd|th)?\s+day\s+of\s+[A-Za-z\.]+,?\s+\d{4})'
+  - 'is\s+effective\s+as\s+from\s+the\s+(\d{1,2}(?:st|nd|rd|th)?\s+day\s+of\s+[A-Za-z\.]+,?\s+\d{4})'
+  - 'is\s+executed\s+on\s+this\s+(\d{1,2}(?:st|nd|rd|th)?\s+day\s+of\s+[A-Za-z\.]+,?\s+\d{4})'
+  - 'Effective\s+date\s+shall\s+be\s+the\s+earlier\s+of:\s*([A-Za-z\.]+\s+\d{1,2},?\s+\d{4})'
+  - '(?:effective|commences)?\s*(?:on\s+the)?\s*(?:date\s+of)?\s*(?:immediately\s+)?(?:upon\s+(?:full\s+)?)?(?:execution|signing)(?:\s+of\s+this\s+(?:agreement|contract))?\s*(?:on\s+this\s+)?([A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?\s+day\s+of\s+[A-Za-z\.]+,?\s+\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+day\s+of\s+[A-Za-z\.]+,?\s+\d{4}|[A-Za-z\.]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})'
+  - '(?:(?:this\s+)?(?:agreement|contract|extension)\s+(?:becomes\s+|is\s+|shall\s+be\s+)?effective(?:\s+on:)?|\b(?:deemed(?:\s+to\s+be)?\s+effective(?:\s+from)?)|agreement\s+binding\s+retroactively|,?\s+dated\s+as\s+of)\s*(?:date)?\s*(?:retroactively?)?\s*(?:as\s+of(?:\s+the)?|from|on(?:\s+the)?|to|:|-|on\s+the\s+(?:later|earlier)\s+of:?|shall\s+be\s+the\s+(?:earlier|later)\s+of:?)?\s*([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4}|_______)\.?(?!.*(?:Term\s+Sheet|means\s+that\s+certain|Original\s+COOA|Co-operation\s+Agreement|Purchase\s+Agreement))'
+  - '(?:(?:term|period|services|performance|work|agreement|contract)\s+(?:shall\s+)?(?:commences|begins|starts)|\b(?:commence(?:s|ment|ing)?|start(?:s|ning)?|starting|begin(?:s|ning)?|renewal|extension|delivery|go-live|goes\s+live|launch(?:es)?|activation(?:\s+occurs\s+on)?|implementation|shall\s+be\s+commenced\s+on|binding\s+from))\s*(?:date)?\s*(?:retroactively?)?\s*(?:as\s+of(?:\s+the)?|from|on(?:\s+the)?|to|:|-|on\s+the\s+(?:later|earlier)\s+of:?|shall\s+be\s+the\s+(?:earlier|later)\s+of:?)?\s*([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4}|_______)\.?'
+  
+  # ===============================================================================
+  # 3. STRUCTURALLY SPECIFIC (e.g., "Date" as a header with newlines)
+  # ===============================================================================
+  - '(?:^|\n)Date\s*\n\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})'
+  - '(?:^|\n)\s*Date\s*\n\s*([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4}|_______)\.?'
+  
+  # ===============================================================================
+  # 4. CONDITIONAL/NON-DATE CAPTURES
+  # ===============================================================================
+  - 'effective\s+as\s+of\s+the\s+(?:later|earlier)\s+of\s+the\s+dates\s+beneath\s+the\s+Parties''\s+signatures\s+below'
+  - '\bdate\s+(?:is|of|as|shall\s+be)?\s*(?:the)?\s*(?:as\s+identified\s+in\s+the\s+)?(last signature|order form|purchase|order)\b'
+  - 'shall\s+commence\s+as\s+of\s+(the\s+Effective\s+Date)'
+
+  # ===================================================================
+  # 5. GENERAL PATTERNS (Less context, more likely to have false positives)
+  # ===============================================================================
+  - '(?:this\s+)?(?:agreement|contract),?\s+dated\s+as\s+of\s+([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4})\s*(?:\("?<Effective\s+Date|the\s+Effective\s+Date>"?\))?'
+  - 'is\s+entered\s+into\s+effective\s+as\s+of\s+(?:the\s+)?([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4}|_______)\.?'
+  - 'is\s+made(?:(?:\s+and)?\s+effective)?\s+as\s+of\s+(?:this|the)?\s*([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4}|_______)\.?'
+  - 'Effective\s*(?:date)?\s*[:\-]?\s*(\d{4}[./-]\d{1,2}[./-]\d{1,2})(?:T[0-9:.]+Z?)?'
+  - 'Effective\s*(?:date)?\s*[:\-]?\s*([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?,?\s+\d{4}|\d{1,2}(?:\s*)?(?:s\s*t|n\s*d|r\s*d|t\s*h)?\s+(?:(?:day\s+)?of\s+)?[A-Za-z\.]+,?\s+\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|[A-Za-z]+\s+\d{4}|_______)\.?'
+  
+  # ===============================================================================
+  # 6. MOST GENERAL PATTERN (The original culprit, placed last)
+  # ===============================================================================
+  - 'dated\s+as\s+of\s+(?:the\s+)?([A-Za-z\.]+\s+\d{1,2}(?:\s*)?(?:s|n|r|t)?d?,?\s+\d{4})'
+
+config:
+  formatter: |
+    {% if value in ['_______', 'execution', 'signing', 'purchase', 'order form', 'last signature', 'the dates beneath the Parties’ signatures below'] %}
+      To be filled in
+    {% else %}
+      {{ value }}
+    {% endif %}
+  regex_flags: gi
+  data_type: date
+  fallback_text: "Effective date is the date of execution, but a specific date is not mentioned."
+  priority: ordered
+  confidence_scoring: true
+
+
+test_cases:
+#Standard Date Formats
+- input: "This agreement becomes effective on March 15, 2024."
+  expected: "March 15, 2024"
+- input: "The contract is binding from 15th March, 2024."
+  expected: "15th March, 2024"
+- input: "Effective date: 03/15/2024"
+  expected: "03/15/2024"
+- input: "Agreement starts 15-03-2024"
+  expected: "15-03-2024"
+- input: "Services begin on 2024.03.15"
+  expected: "2024.03.15"
+
+#Ordinal Date Formats
+
+- input: "The term commences on the 3rd day of April, 2024."
+  expected: "3rd day of April, 2024"
+- input: "Effective 22nd of December, 2023."
+  expected: "22nd of December, 2023"
+
+#Abbreviated Dates
+
+- input: "Contract effective Jan 5, 2024"
+  expected: "Jan 5, 2024"
+- input: "Performance begins Sept. 1st, 2024"
+  expected: "Sept. 1st, 2024"
+
+#Complex Date Expressions
+#Conditional Dates
+
+- input: "This agreement becomes effective on the later of: January 1, 2024 or the date of regulatory approval."
+  expected: "January 1, 2024"
+- input: "Effective date shall be the earlier of: March 31, 2024 or completion of all conditions."
+  expected: "March 31, 2024"
+
+#Retroactive Dates
+
+- input: "The contract is deemed effective retroactively from February 1, 2024."
+  expected: "February 1, 2024"
+- input: "Agreement binding retroactively as of Dec 15, 2023."
+  expected: "Dec 15, 2023"
+
+#Alternative Terminology
+#Different Action Words
+
+- input: "The engagement launches on April 10, 2024."
+  expected: "April 10, 2024"
+- input: "Implementation goes live May 20, 2024."
+  expected: "May 20, 2024"
+- input: "System activation occurs on June 1, 2024."
+  expected: "June 1, 2024"
+- input: "Service delivery starts July 15, 2024."
+  expected: "July 15, 2024"
+
+#Contract Renewal/Extension
+
+- input: "The renewal period begins August 1, 2024."
+  expected: "August 1, 2024"
+- input: "Extension becomes effective September 30, 2024."
+  expected: "September 30, 2024"
+
+#Execution-Based Dates
+#Various Execution Terms
+
+- input: "This contract is effective immediately upon execution."
+  expected: "To be filled in"
+- input: "Agreement commences on the date of full execution of this contract."
+  expected: "To be filled in"
+- input: "Effective upon signing by both parties."
+  expected: "To be filled in"
+- input: "Binding from the date of execution."
+  expected: "To be filled in"
+
+#Reference-Based Dates
+#Document References
+
+- input: "Effective date shall be as identified in the purchase order."
+  expected: "To be filled in"
+- input: "The date is the order form date."
+  expected: "To be filled in"
+- input: "Commencement date shall be the last signature date."
+  expected: "To be filled in"
+
+#Edge Cases and Boundary Conditions
+#Blank/Placeholder Dates
+
+- input: "The contract becomes effective on _______."
+  expected: "To be filled in"
+- input: "Effective date: ________"
+  expected: "To be filled in"
+
+#Multiple Date Mentions
+
+- input: "While negotiations began on January 1, 2024, the contract becomes effective on February 15, 2024."
+  expected: "February 15, 2024"
+- input: "This agreement, dated March 1, 2024, shall commence on April 1, 2024."
+  expected: "April 1, 2024"
+
+#mbiguous or Partial Matches
+
+- input: "The effective interest rate is 5% starting January 2024."
+  expected: "January 2024"
+- input: "Performance metrics are effective immediately."
+  expected: "Effective date is the date of execution, but a specific date is not mentioned."
+
+#Different Date Separators
+
+- input: "Contract starts 01/15/24"
+  expected: "01/15/24"
+- input: "Effective 2024-12-31"
+  expected: "2024-12-31"
+- input: "Begins 15.12.2024"
+  expected: "15.12.2024"
+
+#Negative Test Cases (Should Not Match)
+#Irrelevant Effective Mentions
+
+- input: "This method is effective for data processing."
+  expected: "Effective date is the date of execution, but a specific date is not mentioned."
+- input: "The team's performance was effective during Q1 2024."
+  expected: "Effective date is the date of execution, but a specific date is not mentioned."
+
+#Date Without Context
+
+- input: "Please review the terms by March 15, 2024."
+  expected: "Effective date is the date of execution, but a specific date is not mentioned."
+- input: "The meeting is scheduled for April 1, 2024."
+  expected: "Effective date is the date of execution, but a specific date is not mentioned."
+
+#Complex Sentence Structures
+#Long Sentences with Multiple Clauses
+
+- input: "Notwithstanding any other provision herein, this agreement shall commence as of May 1, 2024, subject to all conditions precedent being satisfied."
+  expected: "May 1, 2024"
+- input: "Upon completion of due diligence and regulatory approval, which are conditions precedent, the contract becomes effective on June 15, 2024."
+  expected: "June 15, 2024"
+
+#Passive Voice Constructions
+
+- input: "The agreement is deemed to be effective from July 1, 2024."
+  expected: "July 1, 2024"
+- input: "It is agreed that the term shall be commenced on August 15, 2024."
+  expected: "August 15, 2024"
+
+#International Date Formats
+#European Style
+
+- input: "Contract effective 15/03/2024"
+  expected: "15/03/2024"
+- input: "Agreement begins 31.12.2024"
+  expected: "31.12.2024"
+
+#ISO Format Variations
+
+- input: "Effective date: 2024-03-15T00:00:00"
+  expected: "2024-03-15"
+
+#Special Characters and Formatting With Punctuation
+
+- input: "The contract becomes effective on: January 1, 2024."
+  expected: "January 1, 2024"
+- input: "Effective date - March 15, 2024"
+  expected: "March 15, 2024"
+
+# With Extra Whitespace
+
+- input: "Agreement    effective     on     April   1,   2024"
+  expected: "April   1,   2024"
+
+#Performance Test Cases -Very Long Text
+
+- input: "This is a very long contract with many clauses and provisions that go on for several sentences before mentioning that the agreement becomes effective on December 1, 2024, and then continues with more legal language."
+  expected: "December 1, 2024"
+
+# Multiple Potential Matches
+
+- input: "The initial term commences January 1, 2024, but the services shall begin on February 1, 2024."
+  expected: "January 1, 2024"
+
+# OCR Error
+- input: "THIS AGREEMENT is entered into effective as of the 24t h day of August 2018, by and among ALPS Distributors, Inc."
+  expected: "24t h day of August 2018"
+
+# Commencement Date
+- input: 'This Joint Supply and Marketing Agreement (hereinafter referred to as the ”JSMA") shall be effective as of May 1, 2020 “the Commencement Date” and is made and entered into this 10t h day of January, 2020 between Bunker One (USA) Inc Term Sheet means that certain summary of terms regarding the proposed purchase of Series B1 Preferred Shares of Vertex Energy, Inc dated November 25, 2019.'
+  expected: "May 1, 2020"    
+
+- input: 'THIS PRODUCT SALE AND MARKETING AGREEMENT (this “Agreement”) is made this 12th day of November, 2018 (the “Effective Date”), by and between Calm.com, Inc., a Delaware corporation, having offices at 140 2nd Street, 3rd Floor, San Francisco, California 94105 (“Calm”) and XpresSpa Group, Inc., a Delaware corporation, having offices at 780 Third Avenue, 12th Floor, New York, New York 10017 (“XSPA”). Each ofCalm and XSPA may be referred to herein individually as a “Party” and collectively as the “Parties”.'
+  expected: "12th day of November, 2018"
+
+- input: 'THIS LICENSE AND RESELLER AGREEMENT dated as of the October 30, 2018 is made BETWEEN: EHAVE, INC., a company incorporated under the laws of the Province of Ontario, Canada (“Ehave”); - and - COMPANION HEALTHCARE TECHNOLOGIES CORP, a company incorporated under the laws of the Province of Ontario (“CHT”), Effective Date'
+  expected: "October 30, 2018"
+
+- input: 'This Event Sponsorship Agreement (“Agreement”) is made and effective as of February 1, 2019'
+  expected: 'February 1, 2019'
+
+- input: "This Outsourcing Agreement (hereinafter “Agreement”) is effective as from the 1st day of January, 2009, by and between:"
+  expected: "1st day of January, 2009"
+
+- input: "This OUTSOURCING AGREEMENT (this “Agreement”) is made and entered into as of the 16t h day of May, 2017, by and among"
+  expected: "16t h day of May, 2017"
+
+- input: "Outsourcing Agreement\nBetween\nParatek Pharmaceuticals, Inc.\nand\nCARBOGEN AMCIS AG\nDate\n30 December 2016"
+  expected: "30 December 2016"
+- input: 'This Strategic Alliance Agreement (“Agreement”) is executed on this 11th day of December, 2015 (“Execution Date”)'
+  expected: "11th day of December, 2015"

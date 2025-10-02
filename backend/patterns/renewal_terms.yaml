@@ -1,0 +1,9 @@
+patterns:
+  # automatic or optional renewal/extension
+  - (?i)\b(?:contract|agreement)\b[^.]*?\b(?:automatic(?:ally)?\s+)?(?:renew(?:al|s)?|extend(?:s|ed)?)\b[^.]*?(?:for\s+an?\s+additional|\s+years?|\s+terms?|\s+periods?)
+  # mutual extension clause
+  - (?i)\bmutual\b[^.]*?\bextension\b[^.]*?\b(?:agreed|agreement|upon)\b
+
+data_type: text
+fallback_text: "No renewal/extension terms found"
+find_all: false

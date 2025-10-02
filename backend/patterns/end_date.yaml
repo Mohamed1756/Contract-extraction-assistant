@@ -1,0 +1,142 @@
+patterns:
+  # Most specific date patterns, handles ordinals and optional day of week
+  - '(?:terminates?|ends?|expires?|licenses?\s+granted\s+hereunder\s+shall\s+expire|expiration(?:\s+date)?(?:\s+is)?|until|through|valid\s+(?:for|until)|in\s+effect\s+through|termination\s+date:?|ending\s+on|ends\s+at\s+close\s+of\s+business\s+on\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?)\s+(?:on\s+)?([A-Za-z]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})'
+  
+  # Date ranges - capture the end date
+  - 'from\s+[A-Za-z]+\s+\d{1,2},?\s+\d{4}\s+through\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})'
+  - 'from\s+[A-Za-z]+\s+\d{1,2},?\s+\d{4}\s+(?:and\s+)?(?:continue\s+)?until\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})'
+  
+  # Time-specific termination
+  - 'continue\s+until\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})(?:\s+at\s+\d{1,2}:\d{2}(?:am|pm)?)?'
+  
+  # Relative termination patterns
+  - 'will\s+end\s+automatically\s+upon\s+the\s+end\s+of\s+(Year\s+\d+)'
+  
+  # Fixed date patterns with specific end dates, ignoring markdown
+  - '(?i)Term\s+shall\s+commence\s+on\s+\*\*[A-Za-z]+\s+\d{1,2},?\s+\d{4}\*\*\s+and\s+end\s+on\s+\*\*([A-Za-z]+\s+\d{1,2},?\s+\d{4})\*\*'
+  
+  # "Expire upon" with complex conditions - capture key dates
+  - 'expire\s+upon\s+.*?(?:and\s+)?\([b-z]\)\s+the\s+last\s+day\s+in\s+([A-Za-z]+,?\s+\d{4})'
+  
+  # Generic term duration patterns (more robust)
+  - '(?i)(?:agreement|contract|term)?\s*(?:is\s+)?valid\s+for\s+((?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s*\(?\d*\)?\s*(?:years?|months?))'
+  - '(?i)continue\s+for\s+a\s+period\s+of\s+((?:one|two|three|four|five|six|seven|eight|nine|ten|twelve|\d+)\s*\(?\d*\)?\s*(?:full\s+calendar\s+)?(?:years?|months?))'
+  - '(?i)for\s+an\s+initial\s+period\s+of\s+((?:one|two|three|four|five|six|seven|eight|nine|ten|twelve|\d+)\s*(?:years?|months?))'
+  - '(?i)the\s+agreement\s+will\s+continue\s+for\s+\*\*\*((?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s*\(\d+\)\s*years?)\*\*\*'
+  - '(?i)for\s+an\s+additional\s+\w+\s+\[?((?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s*years?)\]?'
+
+  # Auto-renewal patterns
+  - 'automatically\s+renew\s+for\s+(?:additional\s+)?(?:periods?\s+of\s+)?(\d+\s+years?)'
+  
+  # Perpetual/indefinite (updated)
+  - 'continue\s+in\s+(perpetuity)'
+  - 'shall\s+continue\s+in\s+(perpetuity|indefinitely)'
+  - '(perpetually)\s+thereafter'
+  - 'shall\s+continue\s+in\s+force\s+(indefinitely|perpetual(?:\s+license)?)'
+  - 'shall\s+not\s+terminate\s+for\s+any\s+reason'
+
+fallback_text: "Continues indefinitely or termination clause applies."
+data_type: "date_or_term"
+
+test_cases:
+  # Standard End Date Formats
+  - input: "This agreement terminates on March 15, 2024."
+    expected: "March 15, 2024"
+  - input: "The contract expires December 31, 2025."
+    expected: "December 31, 2025"
+  - input: "Valid until June 30, 2026."
+    expected: "June 30, 2026"
+  - input: "Termination Date: April 1, 2023"
+    expected: "April 1, 2023"
+  - input: "In effect through September 15, 2024."
+    expected: "September 15, 2024"
+
+  # Date Range Patterns
+  - input: "Valid from January 1, 2023 through December 31, 2025."
+    expected: "December 31, 2025"
+  - input: "From April 1, 2022 and continue until March 31, 2027."
+    expected: "March 31, 2027"
+  - input: "Continue until April 30, 2025 at 11:59pm."
+    expected: "April 30, 2025"
+
+  # Term Duration Patterns
+  - input: "This Agreement is valid for five (5) years."
+    expected: "five (5) years"
+  - input: "Continue for a period of twelve (12) full calendar months."
+    expected: "twelve (12) full calendar months"
+  - input: "Initial term of three (3) years from the Effective Date."
+    expected: "three (3) years"
+  - input: "For an additional seven years from execution."
+    expected: "seven years"
+  - input: "The term of this Agreement is ten (10) months from the date hereof."
+    expected: "ten (10) months"
+
+  # Complex Conditional Patterns
+  - input: "Expire upon the later of: (a) conclusion of the 2023/24 season and (b) the last day in February, 2024."
+    expected: "February, 2024"
+  - input: "Unless earlier terminated, will end automatically upon the end of Year 5."
+    expected: "Year 5"
+  - input: "Shall end on the 60th day following written notice from either party."
+    expected: "fallback"
+
+  # Perpetual/Indefinite Patterns
+  - input: "This Agreement shall continue in perpetuity unless terminated."
+    expected: "perpetuity"
+  - input: "Remains in effect perpetually thereafter."
+    expected: "perpetually"
+  - input: "Shall not terminate for any reason unless conditions are met."
+    expected: "indefinite"
+  - input: "Continue indefinitely until terminated in accordance with Section 5."
+    expected: "indefinitely"
+
+  # Auto-Renewal Patterns
+  - input: "Initial term of two (2) years, then automatically renews for successive one-year terms."
+    expected: "two (2) years"
+  - input: "Valid for 18 months with automatic renewal for additional 12-month periods."
+    expected: "18 months"
+
+  # Real-World Complex Cases
+  - input: "This Agreement commences upon execution and is for a ten (10) year term…"
+    expected: "ten (10) year term"
+  - input: "Effective for an initial period of 1 year ('Initial Term')."
+    expected: "1 year"
+  - input: "The Contract is valid for 5 years, beginning from and ended on [blank]."
+    expected: "5 years"
+  - input: "During the period beginning on the Effective Date and ending on December 31, 2018."
+    expected: "December 31, 2018"
+
+  # Edge Cases with Formatting
+  - input: "Subject to termination, maintain software for an additional five [years]."
+    expected: "five years"
+  - input: "Term shall commence on **January 1, 2020** and end on **December 31, 2022**."
+    expected: "December 31, 2022"
+  - input: "The agreement will continue for ***three (3) years*** from signing."
+    expected: "three (3) years"
+
+  # Fallback Cases (External Dependencies)
+  - input: "Term shall be governed by the underlying Master Service Agreement."
+    expected: "fallback"
+  - input: "Continues for so long as Company remains a shareholder of the entity."
+    expected: "fallback"
+  - input: "Valid until the Parties have signed the follow-on agreement."
+    expected: "fallback"
+  - input: "Terminates upon completion of the project deliverables."
+    expected: "fallback"
+  - input: "Expires when the Sales Term under the referenced Agreement ends."
+    expected: "fallback"
+
+  # Anniversary and Calculation Cases (LLM Candidates)
+  - input: "Ends on the twenty-first (21st) anniversary of the Commencement Date."
+    expected: "llm_needed"
+  - input: "Term concludes 5 years after the first commercial sale."
+    expected: "llm_needed"
+  - input: "Expires 36 months from the date of initial deployment."
+    expected: "llm_needed"
+
+  # Tricky Patterns
+  - input: "Agreement Period: Effective Date January 1, 2019, Termination Date: December 31, 2023."
+    expected: "December 31, 2023"
+  - input: "The licenses granted hereunder shall expire on March 31st, 2025."
+    expected: "March 31st, 2025"
+  - input: "Unless renewed, this contract ends at close of business on Friday, June 15, 2024."
+    expected: "June 15, 2024"

@@ -1,0 +1,9 @@
+patterns:
+  - "at\\s+least\\s+((?:\\d+\\s+days'?|\\d+\\s+months'?))\\s+(?:written\\s+)?notice"
+  - "giving\\s+the\\s+other\\s+party\\s+(\\d+\\s+days'?\\s+notice)"
+  - "at\\s+least\\s+(ninety\\s+\\(90\\)\\s+days)\\s+before\\s+the\\s+end\\s+of\\s+the\\s+Initial\\s+Subscription\\s+Period"
+  - "at\\s+least\\s+([^,]+?)\\s+before\\s+the\\s+effective\\s+date"
+  - '(?i)\b(?:prior|advance)\s+written\s+notice\b(?!\s+(?:of\s+)?(?:\d+|\w+)\s+(?:days?|weeks?|months?|years?))'
+  - "(\\d+)\\s*(calendar|business)?\\s*days?\\s*prior written notice"
+  - '(?i)\b((?:not\s+less\s+than\s+)?\d+\s+(?:calendar\s+)?days?\s+(?:prior|advance|written)\s+notice)\b'
+data_type: "text"

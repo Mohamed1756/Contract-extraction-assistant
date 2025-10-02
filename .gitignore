@@ -1,0 +1,19 @@
+# Ignore environment variables
+.env
+
+# Node / frontend
+node_modules/
+dist/
+*.log
+
+# Python virtual environments
+.venv/
+venv/
+
+# Local data
+uploads/
+
+# OS / editor cruft
+.DS_Store
+.idea/
+.vscode/
