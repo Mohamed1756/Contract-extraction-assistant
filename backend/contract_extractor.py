@@ -307,7 +307,65 @@ class ContractExtractor:
         text = re.sub(r"\s*\n\s*", "\n", text)
         return text.strip()
 
-  
+    def _sanitize_llm_answer(self, answer: Optional[str], field: str) -> Optional[str]:
+        """Normalize LLM output to a single, plain-text line without labels.
+        - Strips markdown, bullets, and common labels like 'Summary:'
+        - Collapses whitespace
+        - Keeps only the first sentence/line to avoid explanations
+        """
+        if not answer:
+            return None
+        t = answer.strip()
+        # Strip codeFences if any
+        t = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", t)
+        # Remove markdown emphasis/backticks
+        t = re.sub(r"[*_`]+", "", t)
+        # Remove leading bullets and generic labels
+        t = re.sub(r"^\s*(?:[-*•]+\s*)?", "", t)
+        t = re.sub(
+            r"^\s*(?:[A-Za-z ]{3,40})\s*(?:summary|overview|answer|result|extraction|notice period|termination notice period|renewal terms)\s*:?-?\s*",
+            "",
+            t,
+            flags=re.IGNORECASE,
+        )
+        # Collapse whitespace
+        t = re.sub(r"\s+", " ", t).strip()
+        # Keep only the first line
+        if "\n" in t:
+            t = t.split("\n", 1)[0].strip()
+        # Keep only the first sentence if multiple
+        m = re.match(r"(.+?[.!?])(?:\s|$)", t)
+        if m:
+            t = m.group(1).strip()
+        # Field-specific light normalizations
+        if field in ("start_date", "end_date"):
+            t = re.sub(r"^(?:effective|start|end|termination)\s+date\s*[:\-]\s*", "", t, flags=re.IGNORECASE)
+        return t or None
+    
+    def _is_uninformative_llm_answer(self, text: str, field: str) -> bool:
+        """Heuristics to catch vacuous answers like 'Contract renewal conditions specified.'"""
+        if not text:
+            return True
+        t = text.strip().lower().rstrip('.')
+        allowed_exact = {"not specified", "no renewal terms specified", "not found"}
+        if t in allowed_exact:
+            return False
+        generic_patterns = [
+            r"^(contract )?(renewal|termination notice period|notice period|end date|start date)s? (conditions|terms|details|information) (are )?(provided|specified|mentioned)$",
+            r"^(as per (the )?contract|per (the )?agreement)$",
+            r"^(refer to (the )?(contract|agreement))$",
+        ]
+        for pat in generic_patterns:
+            if re.match(pat, t, re.IGNORECASE):
+                return True
+        if field == "termination_notice_period":
+            if not re.search(r"(day|days|week|weeks|month|months|year|years|immediate|upon|prior|written|notice|business day)", t, re.IGNORECASE):
+                return True
+        if field == "renewal_terms":
+            if not re.search(r"(renew|renewal|extend|auto|automatic|mutual|unless|notice|period|term|year|month|days)", t, re.IGNORECASE):
+                return True
+        return False
+ 
     # ------------------------------------------------------------------
     # LLM Extraction for 4 specific fields only
     # ------------------------------------------------------------------
@@ -329,9 +387,10 @@ class ContractExtractor:
                             "type": "text",
                             "text": (
                                 "You are an expert contract analyst. Read the following contract text and find the start date or term.\n"
-                                "- If a specific start date is mentioned (e.g., 'October 31, 2010'), respond with ONLY that date in 'Month Day, Year' format.\n"
-                                "- If the start date is described as a term (e.g., 'one year from the effective date'), respond with that exact term.\n"
-                                "- If no start date or term is mentioned, respond with 'Not Found'."
+                                "Output rules: Return ONLY the answer as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
+                                "If a specific start date is mentioned (e.g., 'October 31, 2010'), respond with ONLY that date in 'Month Day, Year' format.\n"
+                                "If the start date is described as a term (e.g., 'one year from the effective date'), respond with that exact term.\n"
+                                "If no start date or term is mentioned, respond with 'Not Found'."
                             ),
                         },
                         {"type": "text", "text": f"Contract Text:\n{text[:12000]}"},
@@ -348,7 +407,7 @@ class ContractExtractor:
             if chat_response.choices:
                 raw_output = chat_response.choices[0].message.content.strip()
                 logger.info(f"LLM start date raw output: {raw_output}")
-                return raw_output
+                return self._sanitize_llm_answer(raw_output, "start_date")
 
         except SDKError as e:
             logger.error(f"LLM fallback for start_date with Mistral failed: {e}")
@@ -375,14 +434,15 @@ class ContractExtractor:
                             "type": "text",
                             "text": (
                                 "You are an expert contract analyst. Read the following contract text and find the end date or term.\n"
-                                "- If a specific end date is mentioned (e.g., 'October 31, 2010'), respond with ONLY that date in 'Month Day, Year' format.\n"
-                                "- If the end date is described as a term (e.g., 'one year from the effective date'), respond with that exact term.\n"
-                                "- If no end date or term is mentioned, respond with 'Not Found'."
+                                "Output rules: Return ONLY the answer as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
+                                "If a specific end date is mentioned (e.g., 'October 31, 2010'), respond with ONLY that date in 'Month Day, Year' format.\n"
+                                "If the end date is described as a term (e.g., 'one year from the effective date'), respond with that exact term.\n"
+                                "If no end date or term is mentioned, respond with 'Not Found'."
                             ),
                         },
                         {
                             "type": "text",
-                            "text": f"Contract Text:\n{text[:12000]}"
+                            "text": f"Contract Text:\n{text[:120000]}"
                         }
                     ]
                 }
@@ -391,11 +451,13 @@ class ContractExtractor:
             chat_response = client.chat.complete(
                 model=model,
                 messages=messages,
-                max_tokens=150,
+                max_tokens=120,
             )
             
             if chat_response.choices:
-                return chat_response.choices[0].message.content.strip()
+                return self._sanitize_llm_answer(
+                    chat_response.choices[0].message.content.strip(), "end_date"
+                )
         except SDKError as e:
             logger.error(f"LLM fallback for end_date with Mistral failed: {e}")
         except Exception as e:
@@ -419,14 +481,15 @@ class ContractExtractor:
                         {
                             "type": "text",
                             "text": (
-                                "You are an expert contract analyst. Read the following contract text and analyze the renewal terms. Provide a very concise, one-sentence summary of the renewal terms.\n"
-                                "- If the contract specifies how it renews (e.g., automatically, by mutual agreement), summarize that. For example: 'Renews upon mutual written agreement.' or 'Automatically renews for 1-year periods unless 90 days notice is given.'\n"
-                                "- If the contract is silent on renewal, respond with 'No renewal terms specified'."
+                                "You are an expert contract analyst. Read the following contract text and analyze the renewal terms.\n"
+                                "Output rules: Return EXACTLY one concise sentence as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
+                                "If the contract specifies how it renews (e.g., automatically, by mutual agreement), summarize that in one short sentence.\n"
+                                "If the contract is silent on renewal, respond with 'No renewal terms specified'."
                             ),
                         },
                         {
                             "type": "text",
-                            "text": f"Contract Text:\n{text[:12000]}"
+                            "text": f"Contract Text:\n{text[:120000]}"
                         }
                     ]
                 }
@@ -435,11 +498,16 @@ class ContractExtractor:
             chat_response = client.chat.complete(
                 model=model,
                 messages=messages,
-                max_tokens=150,
+                max_tokens=120,
             )
             
             if chat_response.choices:
-                return chat_response.choices[0].message.content.strip()
+                val = self._sanitize_llm_answer(
+                    chat_response.choices[0].message.content.strip(), "renewal_terms"
+                )
+                if val and self._is_uninformative_llm_answer(val, "renewal_terms"):
+                    return "No renewal terms specified"
+                return val
         except SDKError as e:
             logger.error(f"LLM fallback for renewal_terms with Mistral failed: {e}")
         except Exception as e:
@@ -463,15 +531,17 @@ class ContractExtractor:
                         {
                             "type": "text",
                             "text": (
-                                "You are an expert contract analyst. Read the following contract text and analyze the termination notice period. Provide a concise, business-friendly summary of the termination notice period.\n"
-                                "- If a specific notice period is mentioned, state it clearly (e.g., '30 days written notice').\n"
-                                "- If no general notice period is specified, but there are conditions for immediate termination, summarize that (e.g., 'Not specified for general termination, but allows for immediate termination in cases of bankruptcy').\n"
-                                "- If no termination notice period is mentioned at all, respond with 'Not specified'."
+                                "You are an expert contract analyst. Read the following contract text and analyze the termination notice period.\n"
+                                "Output rules: Return EXACTLY one concise sentence as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
+                                "If a specific notice period is mentioned, state it clearly (e.g., '30 days written notice').\n"
+                               
+                                "If no general notice period is specified, but there are conditions for immediate termination, summarize that in one short sentence.\n"
+                                "If no termination notice period is mentioned at all, respond with 'Not specified'."
                             ),
                         },
                         {
                             "type": "text",
-                            "text": f"Contract Text:\n{text[:12000]}"
+                            "text": f"Contract Text:\n{text[:120000]}"
                         }
                     ]
                 }
@@ -480,11 +550,16 @@ class ContractExtractor:
             chat_response = client.chat.complete(
                 model=model,
                 messages=messages,
-                max_tokens=50,
+                max_tokens=80,
             )
             
             if chat_response.choices:
-                return chat_response.choices[0].message.content.strip()
+                val = self._sanitize_llm_answer(
+                    chat_response.choices[0].message.content.strip(), "termination_notice_period"
+                )
+                if val and self._is_uninformative_llm_answer(val, "termination_notice_period"):
+                    return "Not specified"
+                return val
         except SDKError as e:
             logger.error(f"LLM fallback for termination_notice_period with Mistral failed: {e}")
         except Exception as e:
@@ -528,8 +603,10 @@ class ContractExtractor:
             if llm_renewal_terms and llm_renewal_terms != "Not Found":
                 final_data["renewal_terms"] = ExtractionResult(llm_renewal_terms, ExtractionSource.INFERENCE)
 
-            if llm_termination_notice_period and llm_termination_notice_period != "Not specified":
-                final_data["termination_notice_period"] = ExtractionResult(llm_termination_notice_period, ExtractionSource.INFERENCE)
+            if llm_termination_notice_period:
+                final_data["termination_notice_period"] = ExtractionResult(
+                    llm_termination_notice_period, ExtractionSource.INFERENCE
+                )
 
             analysis: Dict[str, Dict[str, Any]] = {}
             for key in SUPPORTED_KEYS:

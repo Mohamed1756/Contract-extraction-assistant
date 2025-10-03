@@ -1,97 +1,249 @@
-# Contract Analysis Lite
+# Contract Extraction Assistant
 
-A local-first contract assistant that runs entirely on your machine. It pairs a fast regex backbone with an LLM front-end (Mistral) so you get high-quality answers without handing your documents to a hosted service. Ideal for analysts, lawyers, or operators who live in PDF land and want reusable extraction tooling.
+> **Your personal contract extraction assistant.** Bring your own API key, keep your data local, and extract contract terms in seconds—not minutes.
 
-## Highlights
-- **LLM-first pipeline**: Mistral handles nuanced phrasing; curated regex patterns step in whenever the model is uncertain or silent.
-- **Local control**: All parsing happens on your workstation. Only outbound call is to the Mistral API.
-- **Snappy feedback**: Typical PDF turns around in a few seconds on a laptop—great for triaging stacks of agreements.
-- **Focused output**: The open-source drop surfaces four headline fields (start date, end date, renewal terms, termination notice period) with clear source labels.
+## 🎥 Demo
+
+<img src="./demo.gif" alt="Contract extraction demo" width="100%" />
+
+---
+
+## Why This Exists
+
+Traditional contract analysis means:
+- Uploading sensitive documents to third-party platforms
+- Waiting for bloated, inconsistent LLM responses
+- Manually parsing through walls of text
+- No control over your data or extraction logic
+
+**Contract Extraction Assistant** flips the script:
+- **100% local processing** - PDFs never leave your machine (only prompts hit the API)
+- **Lightning fast** - 10 seconds for 4 contracts (89 pages total)
+- **Structured exports** - JSON, CSV, TXT, or PDF—your choice
+- **Consistent accuracy** - LLM intelligence + regex precision = reliable extractions
+- **BYOK model** - Bring your own Mistral API key, pay only for what you use
+
+Built for anyone who processes contracts at scale—whether you're cutting labor costs, triaging stacks of agreements, or need a reusable extraction pipeline that respects your data.
+
+---
+
+## What It Does
+
+Upload a contract PDF and instantly extract:
+- **Start Date** - When the agreement begins
+- **End Date** - Contract expiration or term end
+- **Renewal Terms** - Auto-renewal clauses and conditions
+- **Termination Notice Period** - Required notice for cancellation
+
+Each extraction shows:
+- The extracted value
+- Source attribution (LLM inference or regex pattern)
+- Contract metadata (length, pages analyzed)
+- Extraction timestamp
+
+### Batch Processing
+Upload multiple contracts simultaneously—the system processes them concurrently for maximum throughput. Recent benchmark: **4 contracts (89 pages) in 10 seconds**.
+
+---
 
 ## Architecture
-- **Backend (`backend/`)**
-  - `app.py`: Flask API exposing `/api/analyze-contract` and health endpoints.
-  - `contract_extractor.py`: Windowed text splitter, Mistral prompts, and regex fallback.
-  - `patterns/`: YAML definitions for the four supported fields.
-  - `requirements.txt`: Python dependencies (Flask, PyMuPDF, spaCy, Mistral SDK, etc.).
-- **Frontend (`src/`)**
-  - Vite + React dashboard with Tailwind styling.
-  - `UploadModal.tsx`: Handles PDF uploads to the backend.
-  - `Dashboard.tsx`: Displays extracted values, sources, and helper copy.
 
-## Setup
+**Hybrid extraction pipeline:**
+1. **LLM-first** - Mistral handles nuanced language and contextual interpretation
+2. **Regex fallback** - Curated patterns catch what LLMs miss or provide faster extraction
+3. **Structured output** - Clean, consistent JSON responses every time
 
-### 1. Environment variables
-Copy the template and drop in your Mistral key:
+**Stack:**
+- **Backend**: Flask API with PyMuPDF for parsing, Mistral SDK for inference, spaCy for NLP
+- **Frontend**: React + Vite dashboard with Tailwind UI
+- **Patterns**: YAML-based regex library for the four core fields
 
+---
+
+## Quick Start
+
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Mistral API key ([get one here](https://console.mistral.ai/))
+
+### 1. Clone & Configure
 ```bash
+git clone <repo-url>
+cd contract-analysis-lite
 cp .env.example .env
 ```
 
-Then edit `.env`:
-
+Edit `.env` and add your Mistral key:
 ```
 MISTRAL_API_KEY=sk_your_real_key
 ```
 
-> The extractor hits Mistral first; without a key the regex fallback still works, but accuracy improves notably with the LLM.
-
-### 2. Backend
+### 2. Start Backend
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 ```
-The Flask server listens on `http://localhost:5000`.
+Backend runs on `http://localhost:5000`
 
-### 3. Frontend
+### 3. Start Frontend
 ```bash
 npm install
 npm run dev
 ```
-Vite serves the dashboard at `http://localhost:5173`.
+Dashboard available at `http://localhost:5173`
 
-## Usage
-1. Open the dashboard, upload a contract PDF.
-2. Backend streams text, calls Mistral for the four fields, and applies regex cleanup.
-3. Results appear with value, source (LLM or regex), contract length, and pages analysed.
+### 4. Upload & Extract
+Drag and drop a contract PDF into the dashboard, hit analyze, and get structured results in seconds.
 
-Response example:
+---
+
+## Export Options
+
+All extractions can be exported as:
+- **JSON** - Machine-readable structured data
+- **CSV** - Spreadsheet-friendly format for batch analysis
+- **TXT** - Plain text for documentation
+- **PDF** - Formatted report with extraction details
+
+---
+
+## Roadmap
+
+**Next up:**
+- **Docker deployment** - One-command setup for the entire stack
+- **Hosted web interface** - Optional plug-and-play SaaS version (if demand warrants)
+
+**Under consideration:**
+- **Multi-provider support** - OpenAI, Anthropic Claude, Cohere, or any OpenAI-compatible API
+- Expanded field library (payment terms, liability caps, jurisdiction clauses)
+- Visual PDF annotation (highlight extracted clauses in-context)
+- Multi-language support (contracts in Spanish, German, French, etc.)
+- Advanced audit trail (step-by-step extraction logs)
+- Custom pattern builder (define your own extraction rules via UI)
+- Integration hooks (webhooks, REST API, file watchers)
+
+**Have a feature request?** Open an issue—this tool evolves based on real user needs.
+
+---
+
+## Performance
+
+**Benchmarks on a modern laptop:**
+- Single contract (12-page PDF): ~3 seconds
+- Batch (4 contracts, 89 pages): ~10 seconds
+- Concurrent uploads: Up to 10 contracts processed simultaneously
+
+**Why it's fast:**
+- Parallel processing for batch jobs
+- Efficient PDF text extraction (PyMuPDF)
+- Windowed context sent to LLM (not entire document)
+- Regex pre-filters reduce API calls
+
+---
+
+## Privacy & Security
+
+- **PDFs stay local** - Only prompt text is sent to your chosen LLM provider
+- **No vendor lock-in** - Mistral is the default for easy testing, but the system is designed for multi-provider support (OpenAI, Anthropic, Cohere, etc.)
+- **BYOK model** - You control the API key, provider choice, and billing
+- **No data retention** - Most providers don't train on API calls (verify your provider's policy)
+- **Self-hosted option** - Run the entire stack on your infrastructure
+
+This tool is designed for sensitive contract analysis where data sovereignty and provider flexibility matter.
+
+---
+
+## Example Output
+
 ```json
 {
-  "extraction_timestamp": "2025-10-02T12:00:00Z",
+  "extraction_timestamp": "2025-10-03T14:32:11Z",
   "contract_type": "General Agreement",
   "contract_length": 12345,
+  "pages_analysed": 7,
   "analysis": {
-    "start_date": {"value": "January 1, 2024", "source": "Inference"},
-    "end_date": {"value": "December 31, 2024", "source": "Regex"},
-    "renewal_terms": {"value": "Renews annually unless 60 days notice is given.", "source": "Inference"},
-    "termination_notice_period": {"value": "30 days written notice", "source": "Regex"}
-  },
-  "pages_analysed": 7
+    "start_date": {
+      "value": "January 1, 2024",
+      "source": "Inference"
+    },
+    "end_date": {
+      "value": "December 31, 2024",
+      "source": "Regex"
+    },
+    "renewal_terms": {
+      "value": "Automatically renews for successive one-year terms unless terminated with 60 days written notice",
+      "source": "Inference"
+    },
+    "termination_notice_period": {
+      "value": "30 days written notice",
+      "source": "Regex"
+    }
+  }
 }
 ```
 
-## Performance & Benefits
-- **Speed**: PDF parsing + Mistral call typically lands under ~3 seconds per document on a modern laptop.
-- **Repeatability**: Regex library keeps outputs consistent during batch runs.
-- **Privacy**: PDFs stay local; only the prompt text travels to Mistral.
-- **Extensible**: Add more YAML patterns or hook in additional models if you release a fuller version later.
+---
 
-## Post-MVP To-Do (No Dates)
-- **Dockerize deploy**: Package backend + frontend for a single-command start.
-- **UX polish**: Refine dashboard layout, surface clearer errors, add file previews.
-- **Audit trail**: Persist step-by-step extraction logs for traceability.
-- **Batch workflow**: Improve multi-file upload with progress, consistent outputs, batch exports.
-- **Tighter LLM outputs**: Trim responses so clauses stay concise instead of echoing paragraphs.
-- **Reference snippets**: Link each field back to its exact PDF location or text span.
-- **Field coverage**: Layer in optional clauses beyond the core four.
-- **README candy**: Add badges, demo GIF, roadmap graphic, and contribution guide.
+## Technical Details
 
-## Contributing
-Pull requests welcome—especially around new pattern packs, language extensions, or UI polish.
+### Backend (`backend/`)
+- `app.py` - Flask API with `/api/analyze-contract` endpoint
+- `contract_extractor.py` - Core extraction logic (LLM + regex hybrid)
+- `patterns/` - YAML pattern definitions for each field
+- `requirements.txt` - Python dependencies
+
+### Frontend (`src/`)
+- `UploadModal.tsx` - Multi-file upload with drag-and-drop
+- `Dashboard.tsx` - Results display and export controls
+- Tailwind-styled responsive UI
+
+### Patterns Library
+Each field has a corresponding YAML file in `backend/patterns/`:
+- `start_date.yaml`
+- `end_date.yaml`
+- `renewal_terms.yaml`
+- `termination_notice.yaml`
+
+Add new patterns by creating additional YAML files and registering them in `contract_extractor.py`.
+
+---
+
+## Support & Contributing
+
+**Found this useful?** ⭐ Star the repo to show your support and help others discover it.
+
+Contributions welcome! Areas of interest:
+- **New extraction patterns** - Add fields like payment terms, indemnity clauses, etc.
+- **Language support** - Expand beyond English contracts
+- **UI/UX improvements** - Better visualizations, error handling, accessibility
+- **Performance optimization** - Faster parsing, smarter caching
+- **Documentation** - Tutorials, integration guides, pattern authoring docs
+
+**How to contribute:**
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing-improvement`)
+3. Commit your changes (`git commit -m 'Add amazing improvement'`)
+4. Push to the branch (`git push origin feature/amazing-improvement`)
+5. Open a Pull Request
+
+**Get help:**
+- **Issues**: [GitHub Issues](link-to-issues)
+- **Questions**: Open a GitHub issue with the "question" label
+
+---
 
 ## License
-MIT (feel free to swap in your preferred OSS license before publishing).
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+This means you can:
+- ✅ Use commercially
+- ✅ Modify and distribute
+- ✅ Use privately
+- ✅ Sublicense
+
+Attribution appreciated but not required.
