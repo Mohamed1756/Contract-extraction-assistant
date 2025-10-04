@@ -30,16 +30,21 @@ Built for anyone who processes contracts at scale—whether you're cutting labor
 ## What It Does
 
 Upload a contract PDF and instantly extract:
-- **Start Date** - When the agreement begins
 - **End Date** - Contract expiration or term end
 - **Renewal Terms** - Auto-renewal clauses and conditions
 - **Termination Notice Period** - Required notice for cancellation
 
 Each extraction shows:
-- The extracted value
-- Source attribution (LLM inference or regex pattern)
-- Contract metadata (length, pages analyzed)
-- Extraction timestamp
+- **The extracted value**
+- **Source attribution (LLM inference or regex pattern)**
+- **Expandable source details** with page numbers, extraction method, and reference snippets for quick verification
+- **Contract metadata (length, pages analyzed)**
+- **Extraction timestamp**
+
+The **source details viewer** allows you to inspect the extraction process in detail. Click on the **Expand** button next to each field to see:
+- Page numbers where the extraction occurred
+- The extraction method used (LLM or regex)
+- Reference snippets from the contract PDF
 
 ### Batch Processing
 Upload multiple contracts simultaneously—the system processes them concurrently for maximum throughput. Recent benchmark: **4 contracts (89 pages) in 10 seconds**.
@@ -63,41 +68,64 @@ Upload multiple contracts simultaneously—the system processes them concurrentl
 ## Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Node.js 16+
+- Docker Desktop or another Docker runtime (for one-command setup)
+- Python 3.8+ and Node.js 16+ (only needed for manual install)
 - Mistral API key ([get one here](https://console.mistral.ai/))
 
-### 1. Clone & Configure
-```bash
-git clone <repo-url>
-cd contract-analysis-lite
-cp .env.example .env
-```
+---
 
-Edit `.env` and add your Mistral key:
-```
-MISTRAL_API_KEY=sk_your_real_key
-```
+### Option 1 — Docker (one command)
 
-### 2. Start Backend
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```
-Backend runs on `http://localhost:5000`
+1. **Clone & configure**
+   ```bash
+   git clone <repo-url>
+   cd contract-analysis-lite
+   ```
+2. **Provide your API key** (BYOK). Either export it inline:
+   ```bash
+   export MISTRAL_API_KEY=sk_your_real_key
+   ```
+   or create a `.env` file in the project root containing `MISTRAL_API_KEY=sk_your_real_key`.
+3. **Start the stack**
+   ```bash
+   docker compose up --build
+   ```
+   This launches the Flask backend (http://localhost:5000) and the Vite frontend (http://localhost:5173).
+4. **Open the app** at `http://localhost:5173`, upload a PDF, and watch the results stream in.
 
-### 3. Start Frontend
-```bash
-npm install
-npm run dev
-```
-Dashboard available at `http://localhost:5173`
+> Want to stop the containers? Run `docker compose down`.
 
-### 4. Upload & Extract
-Drag and drop a contract PDF into the dashboard, hit analyze, and get structured results in seconds.
+---
+
+### Option 2 — Manual setup (Python + Node)
+
+1. **Clone & configure**
+   ```bash
+   git clone <repo-url>
+   cd contract-analysis-lite
+   cp .env.example .env
+   ```
+   Edit `.env` and add your key:
+   ```
+   MISTRAL_API_KEY=sk_your_real_key
+   ```
+2. **Start the backend**
+   ```bash
+   cd backend
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   python app.py
+   ```
+   The API listens on `http://localhost:5000`.
+3. **Start the frontend** (in a new shell at the repo root)
+   ```bash
+   npm install
+   npm run dev
+   ```
+   Vite serves the dashboard on `http://localhost:5173`.
+4. **Upload & extract**
+   Drag a contract PDF into the dashboard, click **Analyze**, and download the structured output.
 
 ---
 

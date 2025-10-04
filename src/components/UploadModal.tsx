@@ -2,12 +2,22 @@ import React, { useState, useMemo } from 'react';
 import { X, Upload, FileText, Loader2, CheckCircle, AlertCircle, FileSignature, Briefcase, FileText as FileTextIcon, Trash2, Layers, File as FileIcon, FileUp } from 'lucide-react';
 
 // Interfaces remain the same from the original file
+interface ExtractionField {
+  value: string;
+  source: string;
+  page_number?: number | null;
+  reference_snippet?: string | null;
+  confidence?: string;
+  [key: string]: unknown;
+}
+
 interface ContractAnalysis {
-  renewal_terms?: { value: string; source: string; confidence?: string };
-  end_date?: { value: string; source: string; confidence?: string };
-  start_date?: { value: string; source: string; confidence?: string };
-  termination_notice_period?: { value: string; source: string; confidence?: string };
-  
+  renewal_terms?: ExtractionField;
+  end_date?: ExtractionField;
+  start_date?: ExtractionField;
+  termination_notice_period?: ExtractionField;
+
+  [key: string]: ExtractionField | undefined;
 }
 
 interface ContractData {

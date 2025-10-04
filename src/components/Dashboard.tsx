@@ -6,13 +6,22 @@ import DecorativeBackground from './DecorativeBackground';
 
 // --- START: INTERFACES AND TYPES ---
 // Open-source version: Only 6 fields
+interface ExtractionField {
+  value: string;
+  source: string;
+  page_number?: number | null;
+  reference_snippet?: string | null;
+  confidence?: string;
+  [key: string]: unknown;
+}
+
 export interface ContractAnalysis {
-  start_date?: { value: string; source: string; confidence?: string };
-  end_date?: { value: string; source: string; confidence?: string };
-  termination_notice_period?: { value: string; source: string; confidence?: string };
-  renewal_terms?: { value: string; source: string; confidence?: string };
- 
-  [key: string]: any; // Allow other fields but we'll only display the 4
+  start_date?: ExtractionField;
+  end_date?: ExtractionField;
+  termination_notice_period?: ExtractionField;
+  renewal_terms?: ExtractionField;
+
+  [key: string]: ExtractionField | undefined;
 }
 
 export interface ContractData {
@@ -267,6 +276,8 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                 const fieldData = currentContract.analysis[field.key];
                 const value = fieldData?.value || 'Not Found';
                 const source = fieldData?.source || '';
+                const pageNumber = fieldData?.page_number;
+                const referenceSnippet = fieldData?.reference_snippet;
                 const confidence = fieldData?.confidence || '';
                 const sourceBadgeClass = source
                   ? SOURCE_BADGE_STYLES[source] || 'bg-gray-50 text-gray-600 border border-gray-200'
@@ -299,31 +310,51 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <p className={`text-sm leading-relaxed ${
-                        value === 'Not Found' ? 'text-gray-400 italic' : 'text-gray-800'
-                      }`}>
+                      <p
+                        className={`text-sm leading-relaxed ${
+                          value === 'Not Found' ? 'text-gray-400 italic' : 'text-gray-800'
+                        }`}
+                      >
                         {value}
                       </p>
-                      {source && value !== 'Not Found' && (
-                        <details className="rounded-md border border-gray-200 bg-gray-50/80 p-3">
-                          <summary className="text-xs font-medium text-gray-600 cursor-pointer select-none">View source snippet</summary>
-                          <div className="mt-2 max-h-48 overflow-y-auto pr-1 text-sm text-gray-600 whitespace-pre-wrap">
-                            {source}
-                          </div>
-                        </details>
+                      {(source || typeof pageNumber === 'number' || referenceSnippet) && value !== 'Not Found' && (
+                        <div className="relative overflow-hidden">
+                          <details className="group rounded-md border border-gray-200 bg-gray-50/80 p-3">
+                            <summary className="text-xs font-medium text-gray-600 cursor-pointer select-none list-none">
+                              View source details
+                            </summary>
+                            <div className="mt-2 max-h-48 overflow-y-auto overflow-x-hidden pr-1 text-sm text-gray-600 whitespace-pre-line space-y-3 break-words">
+                              {typeof pageNumber === 'number' && (
+                                <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                                  Page {pageNumber}
+                                </div>
+                              )}
+                              <div className="text-xs font-semibold text-gray-500">
+                                Extraction: {source || 'Not available'}
+                              </div>
+                              {referenceSnippet ? (
+                                <div className="text-sm leading-relaxed">{referenceSnippet}</div>
+                              ) : (
+                                <div className="text-xs text-gray-500 italic">
+                                  Reference snippet unavailable.
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        </div>
                       )}
+                      
+                     
                     </div>
                   </div>
                 );
               })}
             </div>
-
             {/* Footer Info */}
             <div className="mt-12 p-6 bg-blue-50 border border-blue-200 rounded-none">
               <h3 className="text-lg font-semibold text-blue-900 mb-2">Open Source Version</h3>
               <p className="text-sm text-blue-800">
                 This is the lite version displaying 4 key contract fields. The analysis uses a hybrid llm+regex extraction 
-                to identify important terms from your contract documents. Always verify - this is just a tool. 
               </p>
             </div>
           </div>

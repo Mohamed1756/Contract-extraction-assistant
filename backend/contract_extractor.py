@@ -85,9 +85,16 @@ class ExtractionSource(Enum):
 class ExtractionResult:
     value: str
     source: ExtractionSource
+    page_number: Optional[int] = None
+    reference_snippet: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"value": self.value, "source": self.source.value}
+        return {
+            "value": self.value,
+            "source": self.source.value,
+            "page_number": self.page_number,
+            "reference_snippet": self.reference_snippet,
+        }
 
 
 @dataclass
@@ -96,6 +103,18 @@ class PatternConfig:
     formatter: Optional[str] = None
     fallback_text: Optional[str] = "Not Found"
     find_all: bool = False
+
+
+@dataclass
+class PageText:
+    page_number: int
+    text: str
+
+
+@dataclass
+class ContextWindow:
+    page_number: int
+    text: str
 
 
 @dataclass
@@ -174,7 +193,9 @@ class ContractExtractor:
         alpha = sum(c.isalnum() for c in text)
         return alpha / max(len(text), 1)
 
-    def _generate_context_windows(self, text: str, cfg: WindowConfig) -> List[str]:
+    def _generate_context_windows_for_text(
+        self, text: str, cfg: WindowConfig
+    ) -> List[str]:
         """
         Section-aware windowing:
         1. Detect headings (e.g. "5. Limitation of Liability").
@@ -247,6 +268,160 @@ class ContractExtractor:
 
         return windows
 
+    def _generate_context_windows(
+        self, pages: List[PageText], cfg: WindowConfig
+    ) -> List[ContextWindow]:
+        windows: List[ContextWindow] = []
+        for page in pages:
+            page_windows = self._generate_context_windows_for_text(page.text, cfg)
+            for window_text in page_windows:
+                if not window_text.strip():
+                    continue
+                windows.append(
+                    ContextWindow(page_number=page.page_number, text=window_text)
+                )
+        return windows
+
+    def _format_pages_for_llm(self, pages: List[PageText]) -> str:
+        parts = []
+        for page in pages:
+            parts.append(f"Page {page.page_number}:\n{page.text}")
+        return "\n\n".join(parts)
+
+    def _normalize_for_matching(self, text: str) -> str:
+        cleaned = re.sub(r"[^\w\s]", " ", text)
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        return cleaned.strip().lower()
+
+    def _find_page_number_for_value(
+        self, pages: List[PageText], value: Optional[str]
+    ) -> Optional[int]:
+        if not value:
+            return None
+
+        normalized_value = self._normalize_for_matching(value)
+        if not normalized_value:
+            return None
+
+        normalized_pages = [
+            (page.page_number, self._normalize_for_matching(page.text))
+            for page in pages
+        ]
+
+        for page_number, normalized_page_text in normalized_pages:
+            if normalized_value and normalized_value in normalized_page_text:
+                return page_number
+
+        tokens = normalized_value.split()
+        for length in range(min(len(tokens), 6), 2, -1):
+            snippet = " ".join(tokens[:length])
+            if len(snippet) < 4:
+                continue
+            for page_number, normalized_page_text in normalized_pages:
+                if snippet in normalized_page_text:
+                    return page_number
+
+        return None
+
+    def _extract_page_number_from_text(self, text: str) -> Optional[int]:
+        if not text:
+            return None
+        match = re.search(r"page\s*=*\s*(\d+)", text, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        match = re.search(r"page\s+(\d+)", text, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        match = re.search(r"\bPAGE=(\d+)\b", text, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        return None
+
+    def _process_llm_output(
+        self, pages: List[PageText], raw_output: str, field: str
+    ) -> Tuple[Optional[str], Optional[int]]:
+        if not raw_output:
+            return None, None
+
+        output = raw_output.strip()
+        output = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", output)
+
+        answer_part = output
+        page_part = ""
+        if "|||" in output:
+            answer_part, page_part = [segment.strip() for segment in output.split("|||", 1)]
+
+        answer_value = self._sanitize_llm_answer(answer_part, field)
+        if not answer_value:
+            return None, None
+
+        page_number = self._extract_page_number_from_text(page_part)
+        if page_number is None:
+            page_number = self._extract_page_number_from_text(output)
+        if page_number is None:
+            page_number = self._find_page_number_for_value(pages, answer_value)
+
+        return answer_value, page_number
+
+    def _slice_snippet_around_match(
+        self, text: str, value: str, *, radius: int = 180
+    ) -> Optional[str]:
+        if not text or not value:
+            return None
+
+        pattern = re.escape(value[:500])
+        match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+        if not match:
+            normalized_text = self._normalize_for_matching(text)
+            normalized_value = self._normalize_for_matching(value)
+            if not normalized_value:
+                return None
+            idx = normalized_text.find(normalized_value)
+            if idx == -1:
+                tokens = normalized_value.split()
+                for length in range(min(len(tokens), 6), 1, -1):
+                    snippet = " ".join(tokens[:length])
+                    if len(snippet) < 4:
+                        continue
+                    idx = normalized_text.find(snippet)
+                    if idx != -1:
+                        break
+                if idx == -1:
+                    return None
+            start = max(0, idx - radius)
+            end = min(len(normalized_text), idx + len(normalized_value) + radius)
+            # Approximate mapping back to original text by character offsets
+            # Since normalization removes punctuation, the mapping is fuzzy but provides context.
+            return text[start:end].strip()
+
+        start = max(0, match.start() - radius)
+        end = min(len(text), match.end() + radius)
+        return text[start:end].strip()
+
+    def _build_reference_snippet(
+        self,
+        pages: List[PageText],
+        value: Optional[str],
+        page_number: Optional[int],
+        fallback_text: Optional[str] = None,
+    ) -> Optional[str]:
+        if not value:
+            return None
+
+        if page_number is not None:
+            page = next((p for p in pages if p.page_number == page_number), None)
+            if page:
+                snippet = self._slice_snippet_around_match(page.text, value)
+                if snippet:
+                    return snippet
+
+        if fallback_text:
+            snippet = self._slice_snippet_around_match(fallback_text, value)
+            if snippet:
+                return snippet
+
+        return None
+
     # ------------------------------------------------------------------
     # Entry Point
     # ------------------------------------------------------------------
@@ -263,13 +438,13 @@ class ContractExtractor:
                 logger.error("PDF is encrypted and cannot be processed.")
                 return {"error": "PDF is encrypted and cannot be processed."}
 
-            contract_text = self._extract_text_from_pdf(doc)
-            page_count = doc.page_count
+            page_texts = self._extract_text_from_pdf(doc)
+            page_count = len(page_texts)
 
-            if not contract_text.strip():
+            if not any(page.text.strip() for page in page_texts):
                 return {"error": "No readable text found in the PDF."}
 
-            results = self._extract_contract_basics(contract_text)
+            results = self._extract_contract_basics(page_texts)
             results["pages_analysed"] = page_count
             return results
 
@@ -288,17 +463,19 @@ class ContractExtractor:
     # ------------------------------------------------------------------
     # Text Extraction
     # ------------------------------------------------------------------
-    def _extract_text_from_pdf(self, doc: fitz.Document) -> str:
-        text_parts = []
+    def _extract_text_from_pdf(self, doc: fitz.Document) -> List[PageText]:
+        pages: List[PageText] = []
         logger.info("Processing %d pages from PDF.", doc.page_count)
-        for page_num, page in enumerate(doc):
+        for page_index, page in enumerate(doc, start=1):
+            text_content = ""
             try:
-                text_parts.append(page.get_text("text"))
+                text_content = page.get_text("text")
             except Exception as e:
                 logger.warning(
-                    "Could not extract text from page %d: %s", page_num + 1, e
+                    "Could not extract text from page %d: %s", page_index, e
                 )
-        return "\n".join(text_parts)
+            pages.append(PageText(page_number=page_index, text=text_content))
+        return pages
 
     # ------------------------------------------------------------------
     # Pre-processing
@@ -369,15 +546,19 @@ class ContractExtractor:
     # ------------------------------------------------------------------
     # LLM Extraction for 4 specific fields only
     # ------------------------------------------------------------------
-    def _get_start_date_with_llm(self, text: str) -> Optional[str]:
+    def _get_start_date_with_llm(
+        self, pages: List[PageText]
+    ) -> Tuple[Optional[str], Optional[int]]:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
                 logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None
+                return None, None
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
+
+            context_excerpt = self._format_pages_for_llm(pages)[:12000]
 
             messages = [
                 {
@@ -390,10 +571,11 @@ class ContractExtractor:
                                 "Output rules: Return ONLY the answer as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
                                 "If a specific start date is mentioned (e.g., 'October 31, 2010'), respond with ONLY that date in 'Month Day, Year' format.\n"
                                 "If the start date is described as a term (e.g., 'one year from the effective date'), respond with that exact term.\n"
-                                "If no start date or term is mentioned, respond with 'Not Found'."
+                                "If no start date or term is mentioned, respond with 'Not Found'.\n"
+                                "Each excerpt is prefixed with its source page (e.g., 'Page 3:'). Include the page number of the best supporting evidence in the format 'ANSWER ||| PAGE=<number or UNKNOWN>'."
                             ),
                         },
-                        {"type": "text", "text": f"Contract Text:\n{text[:12000]}"},
+                        {"type": "text", "text": f"Contract Text:\n{context_excerpt}"},
                     ],
                 }
             ]
@@ -407,25 +589,31 @@ class ContractExtractor:
             if chat_response.choices:
                 raw_output = chat_response.choices[0].message.content.strip()
                 logger.info(f"LLM start date raw output: {raw_output}")
-                return self._sanitize_llm_answer(raw_output, "start_date")
+                return self._process_llm_output(pages, raw_output, "start_date")
 
         except SDKError as e:
             logger.error(f"LLM fallback for start_date with Mistral failed: {e}")
         except Exception as e:
-            logger.error(f"An unexpected error occurred during LLM fallback for start_date: {e}")
+            logger.error(
+                f"An unexpected error occurred during LLM fallback for start_date: {e}"
+            )
 
-        return None
+        return None, None
 
-    def _get_end_date_with_llm(self, text: str) -> Optional[str]:
+    def _get_end_date_with_llm(
+        self, pages: List[PageText]
+    ) -> Tuple[Optional[str], Optional[int]]:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
                 logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None
+                return None, None
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
-            
+
+            context_excerpt = self._format_pages_for_llm(pages)[:120000]
+
             messages = [
                 {
                     "role": "user",
@@ -437,12 +625,13 @@ class ContractExtractor:
                                 "Output rules: Return ONLY the answer as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
                                 "If a specific end date is mentioned (e.g., 'October 31, 2010'), respond with ONLY that date in 'Month Day, Year' format.\n"
                                 "If the end date is described as a term (e.g., 'one year from the effective date'), respond with that exact term.\n"
-                                "If no end date or term is mentioned, respond with 'Not Found'."
+                                "If no end date or term is mentioned, respond with 'Not Found'.\n"
+                                "Each excerpt is prefixed with its source page (e.g., 'Page 4:'). Include the supporting page number in the format 'ANSWER ||| PAGE=<number or UNKNOWN>'."
                             ),
                         },
                         {
                             "type": "text",
-                            "text": f"Contract Text:\n{text[:120000]}"
+                            "text": f"Contract Text:\n{context_excerpt}"
                         }
                     ]
                 }
@@ -453,27 +642,30 @@ class ContractExtractor:
                 messages=messages,
                 max_tokens=120,
             )
-            
+
             if chat_response.choices:
-                return self._sanitize_llm_answer(
-                    chat_response.choices[0].message.content.strip(), "end_date"
-                )
+                raw_output = chat_response.choices[0].message.content.strip()
+                return self._process_llm_output(pages, raw_output, "end_date")
         except SDKError as e:
             logger.error(f"LLM fallback for end_date with Mistral failed: {e}")
         except Exception as e:
             logger.error(f"An unexpected error occurred during LLM fallback: {e}")
-        return None
+        return None, None
 
-    def _get_renewal_terms_with_llm(self, text: str) -> Optional[str]:
+    def _get_renewal_terms_with_llm(
+        self, pages: List[PageText]
+    ) -> Tuple[Optional[str], Optional[int]]:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
                 logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None
+                return None, None
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
-            
+
+            context_excerpt = self._format_pages_for_llm(pages)[:120000]
+
             messages = [
                 {
                     "role": "user",
@@ -484,12 +676,13 @@ class ContractExtractor:
                                 "You are an expert contract analyst. Read the following contract text and analyze the renewal terms.\n"
                                 "Output rules: Return EXACTLY one concise sentence as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
                                 "If the contract specifies how it renews (e.g., automatically, by mutual agreement), summarize that in one short sentence.\n"
-                                "If the contract is silent on renewal, respond with 'No renewal terms specified'."
+                                "If the contract is silent on renewal, respond with 'No renewal terms specified'.\n"
+                                "Each excerpt is prefixed with its source page (e.g., 'Page 2:'). Add the supporting page number using 'ANSWER ||| PAGE=<number or UNKNOWN>'."
                             ),
                         },
                         {
                             "type": "text",
-                            "text": f"Contract Text:\n{text[:120000]}"
+                            "text": f"Contract Text:\n{context_excerpt}"
                         }
                     ]
                 }
@@ -500,30 +693,35 @@ class ContractExtractor:
                 messages=messages,
                 max_tokens=120,
             )
-            
+
             if chat_response.choices:
-                val = self._sanitize_llm_answer(
-                    chat_response.choices[0].message.content.strip(), "renewal_terms"
-                )
-                if val and self._is_uninformative_llm_answer(val, "renewal_terms"):
-                    return "No renewal terms specified"
-                return val
+                raw_output = chat_response.choices[0].message.content.strip()
+                value, page = self._process_llm_output(pages, raw_output, "renewal_terms")
+                if value and self._is_uninformative_llm_answer(value, "renewal_terms"):
+                    return "No renewal terms specified", None
+                return value, page
         except SDKError as e:
             logger.error(f"LLM fallback for renewal_terms with Mistral failed: {e}")
         except Exception as e:
-            logger.error(f"An unexpected error occurred during LLM fallback for renewal_terms: {e}")
-        return None
+            logger.error(
+                f"An unexpected error occurred during LLM fallback for renewal_terms: {e}"
+            )
+        return None, None
 
-    def _get_termination_notice_period_with_llm(self, text: str) -> Optional[str]:
+    def _get_termination_notice_period_with_llm(
+        self, pages: List[PageText]
+    ) -> Tuple[Optional[str], Optional[int]]:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
                 logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None
+                return None, None
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
-            
+
+            context_excerpt = self._format_pages_for_llm(pages)[:120000]
+
             messages = [
                 {
                     "role": "user",
@@ -534,14 +732,15 @@ class ContractExtractor:
                                 "You are an expert contract analyst. Read the following contract text and analyze the termination notice period.\n"
                                 "Output rules: Return EXACTLY one concise sentence as plain text on a single line. No labels, no bullets, no markdown, no explanations.\n"
                                 "If a specific notice period is mentioned, state it clearly (e.g., '30 days written notice').\n"
-                               
+                                
                                 "If no general notice period is specified, but there are conditions for immediate termination, summarize that in one short sentence.\n"
-                                "If no termination notice period is mentioned at all, respond with 'Not specified'."
+                                "If no termination notice period is mentioned at all, respond with 'Not specified'.\n"
+                                "Each excerpt is prefixed with its source page (e.g., 'Page 5:'). Provide the supporting page number using 'ANSWER ||| PAGE=<number or UNKNOWN>'."
                             ),
                         },
                         {
                             "type": "text",
-                            "text": f"Contract Text:\n{text[:120000]}"
+                            "text": f"Contract Text:\n{context_excerpt}"
                         }
                     ]
                 }
@@ -552,60 +751,101 @@ class ContractExtractor:
                 messages=messages,
                 max_tokens=80,
             )
-            
+
             if chat_response.choices:
-                val = self._sanitize_llm_answer(
-                    chat_response.choices[0].message.content.strip(), "termination_notice_period"
+                raw_output = chat_response.choices[0].message.content.strip()
+                value, page = self._process_llm_output(
+                    pages, raw_output, "termination_notice_period"
                 )
-                if val and self._is_uninformative_llm_answer(val, "termination_notice_period"):
-                    return "Not specified"
-                return val
+                if value and self._is_uninformative_llm_answer(
+                    value, "termination_notice_period"
+                ):
+                    return "Not specified", None
+                return value, page
         except SDKError as e:
-            logger.error(f"LLM fallback for termination_notice_period with Mistral failed: {e}")
+            logger.error(
+                f"LLM fallback for termination_notice_period with Mistral failed: {e}"
+            )
         except Exception as e:
-            logger.error(f"An unexpected error occurred during LLM fallback for termination_notice_period: {e}")
-        return None
+            logger.error(
+                f"An unexpected error occurred during LLM fallback for termination_notice_period: {e}"
+            )
+        return None, None
 
     # ------------------------------------------------------------------
     # Main Extraction Flow
     # ------------------------------------------------------------------
-    def _extract_contract_basics(self, contract_text: str) -> Dict[str, Any]:
-        if not contract_text.strip():
+    def _extract_contract_basics(self, pages: List[PageText]) -> Dict[str, Any]:
+        if not any(page.text.strip() for page in pages):
             return {"error": "Empty contract text provided."}
 
         try:
-            raw_text = self._preprocess_contract(contract_text)
+            preprocessed_pages = [
+                PageText(
+                    page_number=page.page_number,
+                    text=self._preprocess_contract(page.text),
+                )
+                for page in pages
+            ]
+            raw_text = "\n".join(page.text for page in preprocessed_pages)
 
             # LLM Extraction for 4 fields only
             logger.info("Running LLM extraction for 4 fields...")
-            llm_start_date = self._get_start_date_with_llm(raw_text)
-            llm_end_date = self._get_end_date_with_llm(raw_text)
-            llm_renewal_terms = self._get_renewal_terms_with_llm(raw_text)
-            llm_termination_notice_period = self._get_termination_notice_period_with_llm(raw_text)
+            llm_start_date, llm_start_page = self._get_start_date_with_llm(preprocessed_pages)
+            llm_end_date, llm_end_page = self._get_end_date_with_llm(preprocessed_pages)
+            llm_renewal_terms, llm_renewal_page = self._get_renewal_terms_with_llm(preprocessed_pages)
+            (
+                llm_termination_notice_period,
+                llm_termination_page,
+            ) = self._get_termination_notice_period_with_llm(preprocessed_pages)
 
             # Regex Extraction for all fields
-            windows = self._generate_context_windows(raw_text, WindowConfig())
-            all_hits: List[Tuple[str, str, str]] = []
+            windows = self._generate_context_windows(preprocessed_pages, WindowConfig())
+            all_hits: List[Tuple[str, str, Optional[int], str]] = []
             for w in windows:
-                hits = self._extract_with_patterns(w)
+                hits = self._extract_with_patterns(w.text)
                 for k, v in hits.items():
-                    all_hits.append((k, v, w))
+                    all_hits.append((k, v, w.page_number, w.text))
 
-            final_data = self._merge_window_results(all_hits)
+            final_data = self._merge_window_results(all_hits, pages)
 
             # Prioritize LLM results for the 4 specific fields
             if llm_start_date and llm_start_date != "Not Found":
-                final_data["start_date"] = ExtractionResult(llm_start_date, ExtractionSource.INFERENCE)
+                final_data["start_date"] = ExtractionResult(
+                    llm_start_date,
+                    ExtractionSource.INFERENCE,
+                    llm_start_page,
+                    self._build_reference_snippet(pages, llm_start_date, llm_start_page),
+                )
 
             if llm_end_date and llm_end_date != "Not Found":
-                final_data["end_date"] = ExtractionResult(llm_end_date, ExtractionSource.INFERENCE)
+                final_data["end_date"] = ExtractionResult(
+                    llm_end_date,
+                    ExtractionSource.INFERENCE,
+                    llm_end_page,
+                    self._build_reference_snippet(pages, llm_end_date, llm_end_page),
+                )
 
             if llm_renewal_terms and llm_renewal_terms != "Not Found":
-                final_data["renewal_terms"] = ExtractionResult(llm_renewal_terms, ExtractionSource.INFERENCE)
+                final_data["renewal_terms"] = ExtractionResult(
+                    llm_renewal_terms,
+                    ExtractionSource.INFERENCE,
+                    llm_renewal_page,
+                    self._build_reference_snippet(
+                        pages, llm_renewal_terms, llm_renewal_page
+                    ),
+                )
 
             if llm_termination_notice_period:
                 final_data["termination_notice_period"] = ExtractionResult(
-                    llm_termination_notice_period, ExtractionSource.INFERENCE
+                    llm_termination_notice_period,
+                    ExtractionSource.INFERENCE,
+                    llm_termination_page,
+                    self._build_reference_snippet(
+                        pages,
+                        llm_termination_notice_period,
+                        llm_termination_page,
+                    ),
                 )
 
             analysis: Dict[str, Dict[str, Any]] = {}
@@ -631,16 +871,27 @@ class ContractExtractor:
     # Result Merging
     # ------------------------------------------------------------------
     def _merge_window_results(
-        self, hits: List[Tuple[str, str, str]]
+        self,
+        hits: List[Tuple[str, str, Optional[int], str]],
+        pages: List[PageText],
     ) -> Dict[str, ExtractionResult]:
-        grouped = defaultdict(list)
-        for key, val, _ in hits:
-            grouped[key].append(val)
+        grouped: Dict[str, List[Tuple[str, Optional[int], str]]] = defaultdict(list)
+        for key, val, page_num, context_text in hits:
+            grouped[key].append((val, page_num, context_text))
 
-        merged = {}
-        for key, vals in grouped.items():
-            top = max(set(vals), key=len)
-            merged[key] = ExtractionResult(top, ExtractionSource.REGEX)
+        merged: Dict[str, ExtractionResult] = {}
+        for key, entries in grouped.items():
+            best_val, best_page, context_text = max(
+                entries, key=lambda item: len(item[0])
+            )
+            merged[key] = ExtractionResult(
+                best_val,
+                ExtractionSource.REGEX,
+                best_page,
+                self._build_reference_snippet(
+                    pages, best_val, best_page, fallback_text=context_text
+                ),
+            )
 
         # Fallback for any key never matched
         for key in SUPPORTED_KEYS:

@@ -1,0 +1,20 @@
+# Frontend Dockerfile (Vite + React)
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install deps first for better caching
+COPY package*.json /app/
+RUN npm ci || npm install
+
+# Copy the rest of the app (for prod builds). For dev we will mount.
+COPY . /app
+
+# Expose Vite dev server
+EXPOSE 5173
+
+# Default env for Vite to reach backend in compose
+ENV VITE_API_URL=http://localhost:5000/api
+
+# Run dev server binding to 0.0.0.0 so it's reachable outside container
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

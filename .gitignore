@@ -1,14 +1,45 @@
 # Ignore environment variables
 .env
+.env.*
+!.env.example
+.env.local
+.env.test
 
 # Node / frontend
 node_modules/
 dist/
+build/
+.vite/
 *.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.tsbuildinfo
 
 # Python virtual environments
 .venv/
 venv/
+
+# Python build / cache artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+__pypackages__/
+pip-wheel-metadata/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+.cache/
+pytestdebug.log
 
 # Local data
 uploads/
@@ -17,6 +48,7 @@ uploads/
 .DS_Store
 .idea/
 .vscode/
+.python-version
 
 # video demo
 demo.mov
