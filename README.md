@@ -7,7 +7,62 @@
 <img src="./demo.gif" alt="Contract extraction demo" width="100%" />
 
 ---
+## Performance Benchmarks
 
+**Hardware:** M1 Mac  
+**Test Set:** 5 contracts, 97 pages total
+
+---
+
+### Single Document (5 pages)
+
+| Method | Time to Complete | Page References Included? |
+|:--|:--|:--|
+| **This Tool** | **3.09s** | ✅ Yes (with snippets) |
+| General LLM (chat interface) | ~7s | ✅ Yes |
+| **Difference** | **2.3× faster** | - |
+
+---
+
+### Batch Processing (5 contracts, 97 pages)
+
+| Method | Processing Approach | Time to First Result | Time to Complete All | Output Format |
+|:--|:--|:--|:--|:--|
+| **This Tool** | Concurrent | ~2s | ~9s | ✅ Structured JSON/CSV |
+| General LLM (chat interface) | Sequential | ~22s | ~86s | ❌ Text responses |
+| **Difference** | Parallel vs Sequential | **11× faster** | **9.5× faster** | Ready to export |
+
+---
+
+## Why Concurrent Processing Matters
+
+Traditional workflows process contracts one at a time (upload → wait → next file → wait...).
+
+This tool:
+- Uploads all contracts simultaneously  
+- Processes in parallel  
+- Returns structured data ready for export  
+- Waits for the slowest file, not the sum of all files  
+
+**Result:** As batch size grows, the time advantage compounds.
+
+---
+
+## Current Status
+
+**What works:**
+- Fast concurrent extraction (proven above)  
+- 4 core fields: start date, end date, renewal terms, termination notice  
+- Page references included  
+- Export to JSON/CSV/PDF
+
+**In progress:**
+- Snippet extraction: ~50% reliability (being improved)  
+- Full accuracy benchmark: Testing across 500 contracts (coming soon)  
+
+This is an active development project. Speed and scalability advantages are proven; accuracy metrics and edge case handling are being refined.
+
+---
 ## Why This Exists
 
 Traditional contract analysis means:

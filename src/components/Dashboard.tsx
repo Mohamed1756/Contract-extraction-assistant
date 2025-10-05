@@ -4,8 +4,9 @@ import {
 } from 'lucide-react';
 import DecorativeBackground from './DecorativeBackground';
 
+
 // --- START: INTERFACES AND TYPES ---
-// Open-source version: Only 6 fields
+
 interface ExtractionField {
   value: string;
   source: string;
@@ -56,7 +57,6 @@ const OPEN_SOURCE_FIELDS = [
 const SOURCE_BADGE_STYLES: Record<string, string> = {
   Inference: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
   Regex: 'bg-sky-50 text-sky-700 border border-sky-100',
-  'System Fallback': 'bg-amber-50 text-amber-700 border border-amber-100',
 };
 
 const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
@@ -284,7 +284,7 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                   : '';
 
                 return (
-                  <div key={field.key} className="bg-white border border-gray-200 rounded-none p-5 transition-shadow">
+                  <div key={field.key} className="bg-white border border-gray-200 rounded-none p-5 transition-all duration-200 ease-in-out hover:shadow-sm overflow-hidden">
                     <div className="flex items-start justify-between mb-3">
                       <div className="space-y-0.5">
                         <h3 className="text-base font-semibold text-gray-900">{field.label}</h3>
@@ -318,12 +318,13 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                         {value}
                       </p>
                       {(source || typeof pageNumber === 'number' || referenceSnippet) && value !== 'Not Found' && (
-                        <div className="relative overflow-hidden">
-                          <details className="group rounded-md border border-gray-200 bg-gray-50/80 p-3">
-                            <summary className="text-xs font-medium text-gray-600 cursor-pointer select-none list-none">
+                        <div className="relative">
+                          <details className="group">
+                            <summary className="text-xs font-medium text-gray-600 cursor-pointer select-none list-none mt-2 inline-block hover:text-gray-800 transition-colors">
                               View source details
                             </summary>
-                            <div className="mt-2 max-h-48 overflow-y-auto overflow-x-hidden pr-1 text-sm text-gray-600 whitespace-pre-line space-y-3 break-words">
+                            <div className="mt-2 p-3 bg-gray-50 border border-gray-100 rounded-md text-sm text-gray-600 space-y-3">
+                              <div className="overflow-hidden">
                               {typeof pageNumber === 'number' && (
                                 <div className="text-[11px] uppercase tracking-wide text-gray-500">
                                   Page {pageNumber}
@@ -333,12 +334,31 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                                 Extraction: {source || 'Not available'}
                               </div>
                               {referenceSnippet ? (
-                                <div className="text-sm leading-relaxed">{referenceSnippet}</div>
+                                <div className="mt-2 text-sm leading-relaxed break-words whitespace-normal overflow-hidden bg-white p-2 rounded border border-gray-200">
+                                  {(() => {
+                                    const value = fieldData?.value || '';
+                                    if (!value) return referenceSnippet;
+                                    
+                                    const regex = new RegExp(`(${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                                    const parts = referenceSnippet.split(regex);
+                                    
+                                    return parts.map((part, i) => 
+                                      part.toLowerCase() === value.toLowerCase() ? (
+                                        <mark key={i} className="bg-yellow-100 text-gray-900 px-0.5 rounded">
+                                          {part}
+                                        </mark>
+                                      ) : (
+                                        <span key={i}>{part}</span>
+                                      )
+                                    );
+                                  })()}
+                                </div>
                               ) : (
                                 <div className="text-xs text-gray-500 italic">
                                   Reference snippet unavailable.
                                 </div>
                               )}
+                              </div>
                             </div>
                           </details>
                         </div>

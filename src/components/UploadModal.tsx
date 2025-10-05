@@ -403,8 +403,8 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
             {mode === 'single' ? renderSingleMode() : renderBatchMode()}
         </div>
 
-        {/* Footer for Batch Mode */}
-        {mode === 'batch' && fileQueue.length > 0 && (
+      {/* Footer for Batch Mode */}
+      {mode === 'batch' && fileQueue.length > 0 && (
           <div className="flex-shrink-0 p-5 border-t border-gray-200 bg-white">
              <div className="flex items-center justify-between">
                 <div>
@@ -414,9 +414,16 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
                         {failedUploads.length > 0 && <span className="text-red-600">{failedUploads.length} failed</span>}
                     </div>
                 </div>
-                <button onClick={handleBatchProcess} disabled={isProcessing || fileQueue.every(f => f.status !== 'pending')} className="px-6 py-3 bg-forest-600 text-white rounded-lg hover:bg-forest-700 disabled:bg-gray-400 font-editorial-bold flex items-center space-x-2">
-                    {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /><span>Processing...</span></> : <span>Analyze All</span>}
-                </button>
+                <div className="flex items-center space-x-3">
+                    <label className="inline-flex items-center space-x-2 px-5 py-3 bg-white border-2 border-forest-600 text-forest-600 rounded-lg hover:bg-forest-50 transition-colors cursor-pointer font-editorial-bold disabled:opacity-50">
+                        <Upload className="w-5 h-5" />
+                        <span>Add More Files</span>
+                        <input type="file" accept=".pdf" multiple onChange={(e) => handleFilesSelectedForBatch(e.target.files)} className="hidden" disabled={isProcessing} />
+                    </label>
+                    <button onClick={handleBatchProcess} disabled={isProcessing || fileQueue.every(f => f.status !== 'pending')} className="px-6 py-3 bg-forest-600 text-white rounded-lg hover:bg-forest-700 disabled:bg-gray-400 font-editorial-bold flex items-center space-x-2">
+                        {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /><span>Processing...</span></> : <span>Analyze All</span>}
+                    </button>
+                </div>
             </div>
           </div>
         )}
