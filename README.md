@@ -125,7 +125,25 @@ Upload multiple contracts simultaneously—the system processes them concurrentl
 ### Prerequisites
 - Docker Desktop or another Docker runtime (for one-command setup)
 - Python 3.8+ and Node.js 16+ (only needed for manual install)
-- Mistral API key ([get one here](https://console.mistral.ai/))
+- Mistral API key
+
+### Get Started with Mistral AI
+
+1. **Sign up** at [Mistral AI](https://mistral.ai/)
+2. **Choose your plan**:
+   - **Experiment (Free)**: For testing and development. Note that data may be used for training.
+   - **Pay-As-You-Go**: For production use with data privacy guarantees.
+3. **Create an API key** in the Mistral AI dashboard
+4. **Set up your environment**:
+   ```bash
+   # Create a .env file in the project root with your key:
+   echo "MISTRAL_API_KEY=your_api_key_here" > .env
+   ```
+   Replace `your_api_key_here` with your actual Mistral API key.
+
+   > 🚨 **Critical**: You must create this `.env` file *before* running `docker compose up`. The container needs this file at startup to enable Mistral AI features. If the key is missing, the system will fall back to regex-only mode with limited functionality.
+
+> **Note**: The free "Experiment" plan is perfect for testing, but be aware that Mistral may use your API requests to improve their models. For production use or sensitive data, consider a paid plan.
 
 ---
 
@@ -146,6 +164,8 @@ Upload multiple contracts simultaneously—the system processes them concurrentl
    docker compose up --build
    ```
    This launches the Flask backend (http://localhost:5000) and the Vite frontend (http://localhost:5173).
+
+   > ⚠️ **Important**: Make sure to create the `.env` file with your Mistral API key *before* running `docker compose up`. If the API key is not found, the system will fall back to regex-only mode with reduced accuracy.
 4. **Open the app** at `http://localhost:5173`, upload a PDF, and watch the results stream in.
 
 > Want to stop the containers? Run `docker compose down`.

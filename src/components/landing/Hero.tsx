@@ -66,6 +66,27 @@ const Hero = ({ onUploadClick }: { onUploadClick: () => void }) => {
               </p>
             </div>
 
+            {/* API Setup Info */}
+            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-md max-w-2xl mx-auto mb-8 text-left">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-amber-800">Getting Started with Mistral AI</h3>
+                  <div className="mt-2 text-sm text-amber-700">
+                    <p>1. Sign up at <a href="https://mistral.ai" target="_blank" rel="noopener noreferrer" className="font-medium underline">Mistral AI</a></p>
+                    <p>2. Choose the free "Experiment" plan (data may be used for training) or a paid plan for production use</p>
+                    <p>3. Create your API key and add it to a <code className="bg-amber-100 px-1 rounded">.env</code> file in the project root:</p>
+                    <pre className="mt-2 p-2 bg-amber-100 rounded text-xs overflow-x-auto">MISTRAL_API_KEY=your_api_key_here</pre>
+                    <p className="mt-2 text-xs font-medium">⚠️ Important: Create this file <span className="underline">before</span> running <code className="bg-amber-100 px-1 rounded">docker compose up</code>, otherwise the system will fall back to regex-only mode.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* CTA Button */}
             <div className="flex justify-center">
               <button
@@ -82,20 +103,8 @@ const Hero = ({ onUploadClick }: { onUploadClick: () => void }) => {
           </div>
         </div>
 
-        {/* Safari Website Card Placeholder */}
-        <div className="mt-12 flex justify-center">
-          <div className="relative w-full max-w-3xl h-96 bg-gray-100 rounded-2xl shadow-xl overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-6 bg-gray-200 flex items-center justify-start px-2 space-x-2">
-              <div className="w-3 h-3 rounded-full bg-red-400"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div className="w-3 h-3 rounded-full bg-green-400"></div>
-            </div>
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500 text-lg font-editorial">Demo Placeholder</p>
-            </div>
+  
           </div>
-        </div>
-      </div>
 
       {/* Animation Styles */}
       <style >{`
