@@ -6,6 +6,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: contract-extractor-backend
+    env_file:
+      - ./.env
     environment:
       - FLASK_ENV=development
       - PORT=5000
