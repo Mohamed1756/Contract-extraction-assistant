@@ -23,6 +23,27 @@ from mistralai import Mistral, SDKError
 
 load_dotenv()
 
+def get_mistral_api_key() -> tuple[str, bool]:
+    """
+    Get the Mistral API key with demo key fallback.
+    
+    Returns:
+        tuple: (api_key, is_demo) where is_demo is True if using the demo key
+    """
+    # First try to get user's personal API key
+    user_key = os.getenv('MISTRAL_API_KEY', '').strip()
+    if user_key:
+        return user_key, False
+    
+    # Fall back to demo key
+    demo_key = os.getenv('DEMO_MISTRAL_KEY')
+    if not demo_key:
+        logger.warning("No API key found. Please set MISTRAL_API_KEY or DEMO_MISTRAL_KEY in .env")
+        return "", True
+        
+    logger.info("Using demo API key. For production use, please set your own MISTRAL_API_KEY in .env")
+    return demo_key, True
+
 SUPPORTED_KEYS = {
     "start_date",
     "end_date",
@@ -442,7 +463,7 @@ class ContractExtractor:
             page_count = len(page_texts)
 
             if not any(page.text.strip() for page in page_texts):
-                return {"error": "No readable text found in the PDF."}
+                return {"error": "Failed to extract text from PDF."}
 
             results = self._extract_contract_basics(page_texts)
             results["pages_analysed"] = page_count
@@ -552,8 +573,11 @@ class ContractExtractor:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
-                logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None, None
+                api_key, is_demo = get_mistral_api_key()
+                if not api_key:
+                    logger.warning("No API key available, skipping LLM fallback.")
+                    return None, None
+                logger.info(f"Using {'demo ' if is_demo else ''}API key for Mistral AI")
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
@@ -606,8 +630,11 @@ class ContractExtractor:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
-                logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None, None
+                api_key, is_demo = get_mistral_api_key()
+                if not api_key:
+                    logger.warning("No API key available, skipping LLM fallback.")
+                    return None, None
+                logger.info(f"Using {'demo ' if is_demo else ''}API key for Mistral AI")
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
@@ -658,8 +685,11 @@ class ContractExtractor:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
-                logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None, None
+                api_key, is_demo = get_mistral_api_key()
+                if not api_key:
+                    logger.warning("No API key available, skipping LLM fallback.")
+                    return None, None
+                logger.info(f"Using {'demo ' if is_demo else ''}API key for Mistral AI")
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"
@@ -714,8 +744,11 @@ class ContractExtractor:
         try:
             api_key = os.environ.get("MISTRAL_API_KEY")
             if not api_key:
-                logger.warning("MISTRAL_API_KEY not set, skipping LLM fallback.")
-                return None, None
+                api_key, is_demo = get_mistral_api_key()
+                if not api_key:
+                    logger.warning("No API key available, skipping LLM fallback.")
+                    return None, None
+                logger.info(f"Using {'demo ' if is_demo else ''}API key for Mistral AI")
 
             client = Mistral(api_key=api_key)
             model = "mistral-small-latest"

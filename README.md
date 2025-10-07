@@ -2,6 +2,17 @@
 
 > **Your personal contract extraction assistant.** Bring your own API key, keep your data local, and extract contract terms in seconds—not minutes.
 
+## Demo Mode Notice
+
+This project is currently running in **Demo Mode** using a **shared API key**.  
+Intended **for testing and demonstration only**.
+
+### Important:
+- Do **not** upload sensitive or confidential documents.
+- Documents processed in demo mode **may be logged or used for model training**.
+- For full privacy and production-grade performance:
+  - **Bring your own API key (BYOK)** — instructions available on the **hero page** and in the **Quick Start** section.
+
 ## 🎥 Demo
 
 <img src="./demo.gif" alt="Contract extraction demo" width="100%" />

@@ -1,5 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { X, Upload, FileText, Loader2, CheckCircle, AlertCircle, FileSignature, Briefcase, FileText as FileTextIcon, Trash2, Layers, File as FileIcon, FileUp } from 'lucide-react';
+import { 
+  X, Upload, FileText, Loader2, CheckCircle, AlertCircle, FileSignature, 
+  Trash2, File as FileIcon, FileUp, ChevronDown, ChevronUp, 
+  FileCode, Cpu, Handshake, Settings, Star, Award, Package, PackagePlus,
+  Layers
+} from 'lucide-react';
 
 // Interfaces remain the same from the original file
 interface ExtractionField {
@@ -43,39 +48,162 @@ interface UploadModalProps {
   onClose: () => void;
   onAnalysisComplete: (data: ContractData[]) => void;
 }
+// Sample contract data with categories
 const SAMPLE_CONTRACTS = [
+  // License Agreements
+
   {
-    label: 'SaaS Agreement A',
-    filename: 'Software-agreement-sample3.pdf',
+    label: 'Trademark License - Arconic',
+    filename: 'License_Agreements copy/ArconicRolledProductsCorp_20191217_10-12B_EX-2.7_11923804_EX-2.7_Trademark License Agreement.pdf',
     icon: FileSignature,
+    category: 'License Agreements',
+    date: '2019',
+    type: 'Trademark'
   },
   {
-    label: 'SaaS Agreement B',
-    filename: 'Software-agreement-sample2.pdf',
-    icon: Briefcase,
+    label: 'Therapeutic License - Artara',
+    filename: 'License_Agreements copy/ArtaraTherapeuticsInc_20200110_8-K_EX-10.5_11943350_EX-10.5_License Agreement.pdf',
+    icon: FileCode,
+    category: 'License Agreements',
+    date: '2020',
+    type: 'Pharma'
   },
   {
-    label: 'SaaS Agreement C',
-    filename: 'Software-agreement-sample.pdf',
-    icon: FileTextIcon,
+    label: 'Content License - China Real Estate',
+    filename: 'License_Agreements copy/ChinaRealEstateInformationCorp_20090929_F-1_EX-10.32_4771615_EX-10.32_Content License Agreement.pdf',
+    icon: FileText,
+    category: 'License Agreements',
+    date: '2009',
+    type: 'Content License'
   },
+  
+ 
+ 
+  // Sponsorship Agreements
+  {
+    label: 'Esports Sponsorship',
+    filename: 'License_Agreements copy/AlliedEsportsEntertainmentInc.pdf',
+    icon: Star,
+    category: 'Sponsorship',
+    date: '2019',
+    type: 'Esports'
+  },
+  {
+    label: 'ARC Group Sponsorship',
+    filename: 'Sponsorship copy/ArcGroupInc_20171211_8-K_EX-10.1_10976103_EX-10.1_Sponsorship Agreement.pdf',
+    icon: Award,
+    category: 'Sponsorship',
+    date: '2017',
+    type: 'Corporate'
+  },
+  {
+    label: 'EcoScience Sponsorship',
+    filename: 'Sponsorship copy/EcoScienceSolutionsInc_20180406_8-K_EX-10.1_11135398_EX-10.1_Sponsorship Agreement.pdf',
+    icon: Award,
+    category: 'Sponsorship',
+    date: '2018',
+    type: 'Science'
+  },
+  {
+    label: 'FreezeTag Sponsorship',
+    filename: 'Sponsorship copy/FreezeTagInc_20180411_8-K_EX-10.1_11139603_EX-10.1_Sponsorship Agreement.pdf',
+    icon: Star,
+    category: 'Sponsorship',
+    date: '2018',
+    type: 'Gaming'
+  },
+  
+  // Strategic Alliance Agreements
+  {
+    label: 'Chipmos Tech Alliance',
+    filename: 'Strategic Alliance copy/CHIPMOSTECHNOLOGIESBERMUDALTD_04_18_2016-EX-4.72-Strategic Alliance Agreement.PDF',
+    icon: Handshake,
+    category: 'Strategic Alliance',
+    date: '2016',
+    type: 'Technology'
+  },
+  {
+    label: 'Energous Alliance',
+    filename: 'Strategic Alliance copy/ENERGOUSCORP_03_16_2017-EX-10.24-STRATEGIC ALLIANCE AGREEMENT.PDF',
+    icon: Handshake,
+    category: 'Strategic Alliance',
+    date: '2017',
+    type: 'Energy'
+  },
+  {
+    label: 'Moelis Alliance',
+    filename: 'Strategic Alliance copy/MOELIS_CO_03_24_2014-EX-10.19-STRATEGIC ALLIANCE AGREEMENT.PDF',
+    icon: Handshake,
+    category: 'Strategic Alliance',
+    date: '2014',
+    type: 'Financial'
+  },
+  {
+    label: 'Playa Resorts Alliance',
+    filename: 'Strategic Alliance copy/PLAYAHOTELS_RESORTSNV_03_14_2017-EX-10.22-STRATEGIC ALLIANCE AGREEMENT (Hyatt Ziva Cancun).PDF',
+    icon: Handshake,
+    category: 'Strategic Alliance',
+    date: '2017',
+    type: 'Hospitality'
+  },
+  {
+    label: 'Sibannac Alliance',
+    filename: 'Strategic Alliance copy/SIBANNAC,INC_12_04_2017-EX-2.1-Strategic Alliance Agreement.PDF',
+    icon: Handshake,
+    category: 'Strategic Alliance',
+    date: '2017',
+    type: 'Cannabis'
+  },
+  
+  // Supply Agreements
+  {
+    label: 'Agape Supply Agreement',
+    filename: 'Supply copy/AgapeAtpCorp_20191202_10-KA_EX-10.1_11911128_EX-10.1_Supply Agreement.pdf',
+    icon: Package,
+    category: 'Supply',
+    date: '2019',
+    type: 'Nutrition'
+  },
+  {
+    label: 'Loha Supply Agreement',
+    filename: 'Supply copy/LohaCompanyltd_20191209_F-1_EX-10.16_11917878_EX-10.16_Supply Agreement.pdf',
+    icon: Package,
+    category: 'Supply',
+    date: '2019',
+    type: 'Manufacturing'
+  },
+  {
+    label: 'Reynolds Supply Agreement',
+    filename: 'Supply copy/ReynoldsConsumerProductsInc_20191115_S-1_EX-10.18_11896469_EX-10.18_Supply Agreement.pdf',
+    icon: PackagePlus,
+    category: 'Supply',
+    date: '2019',
+    type: 'Consumer Goods'
+  },
+  {
+    label: 'West Pharma Supply',
+    filename: 'Supply copy/WestPharmaceuticalServicesInc_20200116_8-K_EX-10.1_11947529_EX-10.1_Supply Agreement.pdf',
+    icon: PackagePlus,
+    category: 'Supply',
+    date: '2020',
+    type: 'Pharmaceutical'
+  }
 ];
 
-const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) => {
-  // ### NEW: State to manage the selected mode ('single' or 'batch')
-  const [mode, setMode] = useState<'single' | 'batch'>('single');
+// Group contracts by category
+const CONTRACT_CATEGORIES = ['All', ...new Set(SAMPLE_CONTRACTS.map(c => c.category))];
 
-  // State for both modes
+const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) => {
+  // ### State to manage the selected mode ('single' or 'batch')
+  const [mode, setMode] = useState<'single' | 'batch'>('single');
   const [isProcessing, setIsProcessing] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-
-  // State specifically for BATCH mode
   const [fileQueue, setFileQueue] = useState<FileQueueItem[]>([]);
-  
-  // State specifically for SINGLE mode
   const [singleFileProgress, setSingleFileProgress] = useState(0);
   const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [showAllSamples, setShowAllSamples] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const successfulUploads = useMemo(() => fileQueue.filter(f => f.status === 'success'), [fileQueue]);
   const failedUploads = useMemo(() => fileQueue.filter(f => f.status === 'error'), [fileQueue]);
@@ -195,7 +323,7 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
 
   const handleSampleClick = async (sample: typeof SAMPLE_CONTRACTS[0]) => {
       try {
-        const res = await fetch(`/samples/${sample.filename}`);
+        const res = await fetch(`/test_contracts/${sample.filename}`);
         if (!res.ok) throw new Error('Could not load sample PDF.');
         const blob = await res.blob();
         const file = new File([blob], sample.filename, { type: 'application/pdf' });
@@ -251,6 +379,7 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
     }
   };
 
+  // Early return after all hooks are called
   if (!isOpen) return null;
 
   // ### --- RENDER LOGIC --- ###
@@ -347,18 +476,81 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
     </>
   );
 
+  const filteredContracts = selectedCategory === 'All' 
+    ? SAMPLE_CONTRACTS 
+    : SAMPLE_CONTRACTS.filter(contract => contract.category === selectedCategory);
+    
+  const visibleContracts = showAllSamples ? filteredContracts : filteredContracts.slice(0, 6);
+  const canShowMore = filteredContracts.length > 6 && !showAllSamples;
+
   const renderSampleContracts = () => (
     <div className="pt-6">
-        <h3 className="text-md font-editorial-bold text-gray-800 mb-1 text-center">Or, try a sample contract</h3>
-        <p className="text-gray-500 text-center mb-4 text-sm">Get started quickly with a template.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {SAMPLE_CONTRACTS.map((sample) => (
-                <button key={sample.filename} type="button" onClick={() => handleSampleClick(sample)} className="group flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 bg-white hover:bg-forest-50/50 hover:border-forest-300 transition-all duration-200 h-32">
-                    <div className="p-3 mb-2 rounded-lg bg-forest-100/60 "><sample.icon className="w-6 h-6 text-forest-700" /></div>
-                    <span className="text-sm text-center font-editorial-medium text-gray-700">{sample.label}</span>
-                </button>
-            ))}
+      <h3 className="text-md font-editorial-bold text-gray-800 mb-1 text-center">Try a sample contract</h3>
+      <p className="text-gray-500 text-center mb-4 text-sm">Get started quickly with a template document.</p>
+      
+      {/* Category Filter */}
+      <div className="flex flex-wrap justify-center gap-2 mb-6 px-4">
+        {CONTRACT_CATEGORIES.map((category) => (
+          <button
+            key={category}
+            onClick={() => {
+              setSelectedCategory(category);
+              setShowAllSamples(false);
+            }}
+            className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+              selectedCategory === category
+                ? 'bg-forest-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+      
+      {/* Contract Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 px-2">
+        {visibleContracts.map((sample) => (
+          <button 
+            key={sample.filename} 
+            type="button" 
+            onClick={() => handleSampleClick(sample)} 
+            className="group relative flex flex-col items-center justify-center p-4 rounded-xl border border-gray-200 bg-white hover:bg-forest-50/50 hover:border-forest-300 transition-all duration-200 h-32 overflow-hidden"
+          >
+            <div className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full bg-forest-100 text-forest-700">
+              {sample.category}
+            </div>
+            <div className="p-3 mb-2 rounded-lg bg-forest-100/60 group-hover:bg-forest-100 transition-colors">
+              <sample.icon className="w-5 h-5 text-forest-700" />
+            </div>
+            <span className="text-sm text-center font-editorial-medium text-gray-700 group-hover:text-forest-800">
+              {sample.label}
+            </span>
+          </button>
+        ))}
+      </div>
+      
+      {/* Show More/Less Button */}
+      {filteredContracts.length > 6 && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setShowAllSamples(!showAllSamples)}
+            className="text-forest-600 hover:text-forest-800 text-sm font-medium flex items-center justify-center mx-auto gap-1.5"
+          >
+            {showAllSamples ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Show {filteredContracts.length - 6} More Templates
+              </>
+            )}
+          </button>
         </div>
+      )}
     </div>
   );
 
