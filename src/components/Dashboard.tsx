@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft, FileText, Download, Loader2, AlertCircle, FileUp
+  ArrowLeft, FileText, Download, Loader2, AlertCircle, FileUp, Copy, Check, FileText as FileTextIcon
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import DecorativeBackground from './DecorativeBackground';
 
 
@@ -66,6 +68,17 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
   );
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
 
   const formatTimestamp = (timestamp: string) => new Date(timestamp).toLocaleString();
   const formatSeconds = (value?: string) => {
@@ -144,6 +157,152 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
     }
   };
 
+// --- START: UPDATED PDF EXPORT FUNCTION ---
+const exportAsPDF = () => {
+  if (!currentContract) return;
+
+  const doc = new jsPDF();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 15;
+  let cursorY = 0; // Use a cursor to track Y position
+
+  // Define colors (mapping from Tailwind for consistency)
+  const colors = {
+    primaryText: [15, 23, 42],   // slate-900
+    secondaryText: [71, 85, 105], // slate-600
+    headerBg: [241, 245, 249],  // slate-100
+    borderColor: [226, 232, 240] // slate-200
+  };
+
+  // --- 1. Report Header ---
+  doc.setFillColor(colors.headerBg[0], colors.headerBg[1], colors.headerBg[2]);
+  doc.rect(0, 0, pageWidth, 45, 'F');
+  
+  doc.setFontSize(20);
+  doc.setTextColor(colors.primaryText[0], colors.primaryText[1], colors.primaryText[2]);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Contract Analysis Report', margin, 20);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(colors.secondaryText[0], colors.secondaryText[1], colors.secondaryText[2]);
+  doc.text(`File: ${currentContract.filename || 'Untitled Document'}`, margin, 30);
+  doc.text(`Analyzed on: ${new Date(currentContract.extraction_timestamp).toLocaleString()}`, margin, 35);
+  
+  cursorY = 55; // Set cursor below the header
+
+  // --- 2. Performance Summary Section ---
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(colors.primaryText[0], colors.primaryText[1], colors.primaryText[2]);
+  doc.text('Performance Summary', margin, cursorY);
+  cursorY += 8;
+
+  const performanceData = [
+    ['Pages Analysed:', currentContract.pages_analysed ?? '—'],
+    ['Execution Time:', formatSeconds(currentContract.performance_metrics?.execution_time_seconds) || '—'],
+    ['Peak Memory Usage:', formatMegabytes(currentContract.performance_metrics?.peak_memory_usage_mb) || '—']
+  ];
+  
+  // FIX: Call autoTable as a function, passing `doc`
+  autoTable(doc, {
+      startY: cursorY,
+      body: performanceData,
+      theme: 'plain',
+      styles: {
+          fontSize: 10,
+          cellPadding: { top: 1, right: 2, bottom: 1, left: 0 },
+      },
+      columnStyles: {
+          0: { 
+            fontStyle: 'bold', 
+            textColor: colors.primaryText as [number, number, number] // Type assertion to fix the type error
+          },
+          1: { 
+            textColor: colors.secondaryText as [number, number, number] // Type assertion to fix the type error
+          }
+      },
+  });
+  
+  // Get Y position after the summary table to start the next table
+  cursorY = (doc as any).lastAutoTable.finalY + 15;
+
+  // --- 3. Key Contract Terms Table ---
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(colors.primaryText[0], colors.primaryText[1], colors.primaryText[2]);
+  doc.text('Key Contract Terms', margin, cursorY);
+  cursorY += 8;
+  
+  const tableData = OPEN_SOURCE_FIELDS.map(field => {
+    const fieldData = currentContract.analysis[field.key];
+   
+    return [
+      field.label,
+      fieldData?.value || 'Not found',
+      fieldData?.source || 'N/A',
+      
+    ];
+  });
+  
+  // FIX: Call autoTable as a function, passing `doc`
+  autoTable(doc, {
+    startY: cursorY,
+    head: [['Field', 'Extracted Value', 'Source']],
+    body: tableData,
+    margin: { left: margin, right: margin },
+    headStyles: {
+      fillColor: colors.headerBg as [number, number, number],
+      textColor: colors.secondaryText as [number, number, number],
+      fontSize: 10,
+      fontStyle: 'bold' as const,
+      cellPadding: 2,
+    },
+    bodyStyles: {
+      textColor: colors.primaryText as [number, number, number],
+      fontSize: 10,
+      cellPadding: 2,
+      lineWidth: 0.1,
+      lineColor: colors.borderColor as [number, number, number],
+    },
+    alternateRowStyles: {
+      fillColor: [255, 255, 255] as [number, number, number]
+    },
+    columnStyles: {
+      0: { 
+        cellWidth: 40, 
+        fontStyle: 'bold',
+        textColor: colors.primaryText as [number, number, number]
+      },
+      1: { 
+        cellWidth: 'auto', // Allow this column to wrap and take remaining space
+        textColor: colors.primaryText as [number, number, number]
+      },
+      2: { 
+        cellWidth: 25,
+        textColor: colors.secondaryText as [number, number, number]
+      },
+      3: { 
+        cellWidth: 25,
+        textColor: colors.secondaryText as [number, number, number]
+      }
+    },
+    // --- 4. Footer on Every Page ---
+    didDrawPage: (data: any) => {
+      const pageCount = doc.getNumberOfPages();
+      doc.setFontSize(9);
+      doc.setTextColor(colors.secondaryText[0], colors.secondaryText[1], colors.secondaryText[2]);
+      doc.text(`Page ${data.pageNumber} of ${pageCount}`, data.settings.margin.left, pageHeight - 10);
+    }
+  });
+  
+  // --- 5. Save the PDF ---
+  doc.save(`${currentContract.filename?.replace('.pdf', '') || 'contract'}_analysis.pdf`);
+};
+// --- END: UPDATED PDF EXPORT FUNCTION ---
+
+
   // Export functions
   const exportAsJSON = () => {
     if (!currentContract) return;
@@ -217,6 +376,24 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
     <div className="min-h-screen bg-[#F3F3EE] font-editorial text-gray-800">
       <DecorativeBackground />
       
+      {/* GitHub Banner */}
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-2 text-center text-sm">
+        <div className="container mx-auto flex items-center justify-center">
+          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 7.07c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+          </svg>
+          <span>Loving this tool? Give it a star on GitHub to support our work! </span>
+          <a 
+            href="https://github.com/Qleric-labs/contract-extraction-assistant" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="ml-2 font-medium text-white underline hover:text-gray-200 transition-colors"
+          >
+            Star now ⭐
+          </a>
+        </div>
+      </div>
+      
       {/* Header */}
       <header className="bg-[#FCFCF9]/80 backdrop-blur-sm sticky top-0 z-40 border-b border-gray-300">
         <div className="max-w-5xl mx-auto px-6 md:px-10">
@@ -233,7 +410,12 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                   <Download className="w-4 h-4" />
                   <span>Export</span>
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                  <button onClick={exportAsPDF} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center">
+                    <FileTextIcon className="w-4 h-4 mr-2" />
+                    <span>Export as PDF</span>
+                  </button>
+                  <div className="border-t border-gray-100 my-1"></div>
                   <button onClick={exportAsJSON} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">Export as JSON</button>
                   <button onClick={exportAsCSV} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">Export as CSV</button>
                   <button onClick={exportAsText} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">Export as Text</button>
@@ -310,13 +492,28 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <p
-                        className={`text-sm leading-relaxed ${
-                          value === 'Not Found' ? 'text-gray-400 italic' : 'text-gray-800'
-                        }`}
-                      >
-                        {value}
-                      </p>
+                      <div className="flex items-start justify-between">
+                        <p
+                          className={`text-sm leading-relaxed ${
+                            value === 'Not Found' ? 'text-gray-400 italic' : 'text-gray-800'
+                          }`}
+                        >
+                          {value}
+                        </p>
+                        {value !== 'Not Found' && (
+                          <button
+                            onClick={() => copyToClipboard(value, field.key)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors ml-2 p-1 -mt-1 -mr-1"
+                            title="Copy to clipboard"
+                          >
+                            {copiedField === field.key ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                       {(source || typeof pageNumber === 'number' || referenceSnippet) && value !== 'Not Found' && (
                         <div className="relative">
                           <details className="group">
@@ -374,7 +571,7 @@ const Dashboard = ({ onBack, initialContracts }: DashboardProps) => {
             <div className="mt-12 p-6 bg-blue-50 border border-blue-200 rounded-none">
               <h3 className="text-lg font-semibold text-blue-900 mb-2">Open Source Version</h3>
               <p className="text-sm text-blue-800">
-                This is the lite version displaying 4 key contract fields. The analysis uses a hybrid llm+regex extraction 
+                This is the lite version displaying 4 key contract fields. The analysis uses a hybrid llm+regex extraction. If you find this useful, please <a href="https://github.com/Qleric-labs/contract-extraction-assistant" target="_blank" rel="noopener noreferrer" className="font-medium underline">star this repo</a>.
               </p>
             </div>
           </div>

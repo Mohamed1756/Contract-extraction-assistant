@@ -445,7 +445,25 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
               <p className="text-xs text-gray-500 mt-4">PDFs only, max 16MB each</p>
           </div>
       ) : (
-          <div className="space-y-3 pr-2 max-h-[calc(90vh-350px)] overflow-y-auto mt-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-forest-50 p-3 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <div className="bg-forest-100 p-2 rounded-lg">
+                  <Layers className="w-5 h-5 text-forest-700" />
+                </div>
+                <div>
+                  <h4 className="font-editorial-medium text-gray-900">Concurrent Uploads</h4>
+                  <p className="text-sm text-gray-600">
+                    Processing {fileQueue.filter(f => f.status !== 'success').length} file{fileQueue.filter(f => f.status !== 'success').length !== 1 ? 's' : ''} simultaneously
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-1 bg-white px-3 py-1.5 rounded-full border border-forest-200">
+                <span className="text-forest-700 font-editorial-medium">{fileQueue.length}</span>
+                <span className="text-gray-500 text-sm">total</span>
+              </div>
+            </div>
+            <div className="space-y-3 pr-2 max-h-[calc(90vh-400px)] overflow-y-auto">
               {fileQueue.map(item => (
                 <div key={item.id} className="flex items-center space-x-4 p-3 bg-sage-50 rounded-lg">
                   <div className="flex-shrink-0">
@@ -470,6 +488,7 @@ const UploadModal = ({ isOpen, onClose, onAnalysisComplete }: UploadModalProps) 
                   )}
                 </div>
               ))}
+            </div>
           </div>
       )}
       {renderSampleContracts()}
